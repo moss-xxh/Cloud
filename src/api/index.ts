@@ -205,13 +205,6 @@ export function getRawUrl(path: string, inline = true): string {
   return inline ? base : `${base}?inline=false`
 }
 
-export function getAuthRawUrl(path: string, inline = false): string {
-  const token = getToken()
-  const encodedPath = path.split('/').map(encodeURIComponent).join('/')
-  const sep = inline ? '?' : '?inline=false&'
-  return `/api/raw/${encodedPath}${sep}auth=${token}`
-}
-
 export function isImageFile(extension: string): boolean {
   return ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico'].includes(
     extension.toLowerCase()

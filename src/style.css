@@ -17,8 +17,38 @@ body {
   font-family: var(--font-sans);
   background: var(--color-bg);
   color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 * {
   box-sizing: border-box;
+}
+
+/* Reserve keyboard-only focus rings; mouse/touch activations stay quiet.
+   Browsers that support :focus-visible already do this, but this guards
+   against older engines that still paint an outline on :focus. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Subtle custom scrollbars on webkit browsers so the file list doesn't look
+   like a raw browser view. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #dadce0;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #bdc1c6;
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
 }

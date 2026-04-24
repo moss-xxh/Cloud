@@ -2,12 +2,13 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { FileItem } from '../types'
-import { getResources, getRawUrl, isImageFile, getFileIcon, formatSize, formatDate, uploadFile, moveToTrash, renameResource, createFolder } from '../api'
-import AuthImage from '../components/AuthImage.vue'
+import { getResources, getRawUrl, getFileIcon, formatSize, formatDate, uploadFile, moveToTrash, renameResource, createFolder } from '../api'
 import UploadToast from '../components/UploadToast.vue'
 import FilePreview from '../components/FilePreview.vue'
 import MoveModal from '../components/MoveModal.vue'
 import ShareDialog from '../components/ShareDialog.vue'
+import FileCard from '../components/FileCard.vue'
+import DriveDetailDrawer from '../components/DriveDetailDrawer.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -31,10 +32,10 @@ const detailItem = ref<FileItem | null>(null)
 const shareItem = ref<FileItem | null>(null)
 const quickMenuStyle = computed(() => {
   if (!quickMenu.value) return {}
-  const x = Math.min(quickMenu.value.x, globalThis.innerWidth - 200)
-  return { left: x + 'px', top: quickMenu.value.y + 'px' }
+  const x = Math.min(quickMenu.value.x, globalThis.innerWidth - 220)
+  const y = Math.min(quickMenu.value.y, globalThis.innerHeight - 320)
+  return { left: Math.max(8, x) + 'px', top: Math.max(8, y) + 'px' }
 })
-const contextMenu = ref<{ item: FileItem; x: number; y: number } | null>(null)
 
 // File preview
 const previewFile = ref<FileItem | null>(null)
@@ -64,7 +65,6 @@ const breadcrumbs = computed(() => {
 })
 
 const sortedItems = computed(() => {
-  // Filter out hidden files (starting with .)
   const visible = items.value.filter(i => !i.name.startsWith('.'))
   const dirs = visible.filter(i => i.isDir)
   const files = visible.filter(i => !i.isDir)
@@ -96,7 +96,6 @@ const selectedItems = computed(() =>
 
 const selectionCount = computed(() => selectedPaths.value.size)
 
-// Single selected item for enhanced toolbar
 const singleSelectedItem = computed(() => {
   if (selectionCount.value === 1) {
     return selectedItems.value[0] || null
@@ -115,7 +114,6 @@ function clearSelection() {
 
 function handleItemClick(e: MouseEvent, item: FileItem, index: number) {
   if (e.ctrlKey || e.metaKey) {
-    // Ctrl+Click: Toggle multi-select
     const newSet = new Set(selectedPaths.value)
     if (newSet.has(item.path)) {
       newSet.delete(item.path)
@@ -125,7 +123,6 @@ function handleItemClick(e: MouseEvent, item: FileItem, index: number) {
     selectedPaths.value = newSet
     lastClickedIndex.value = index
   } else if (e.shiftKey && lastClickedIndex.value >= 0) {
-    // Shift+Click: Range selection
     const start = Math.min(lastClickedIndex.value, index)
     const end = Math.max(lastClickedIndex.value, index)
     const newSet = new Set(selectedPaths.value)
@@ -135,12 +132,10 @@ function handleItemClick(e: MouseEvent, item: FileItem, index: number) {
     }
     selectedPaths.value = newSet
   } else {
-    // Single click: Open folder or preview file (Google Drive style)
     clearSelection()
     if (item.isDir) {
       router.push('/drive/' + item.path)
     } else if (item.extension && ['.html', '.htm'].includes(item.extension.toLowerCase())) {
-      // HTML files: fetch with auth, then open as blob in new tab
       const token = localStorage.getItem('auth_token') || ''
       fetch(getRawUrl(item.path), { headers: { 'X-Auth': token } })
         .then(res => res.blob())
@@ -155,14 +150,11 @@ function handleItemClick(e: MouseEvent, item: FileItem, index: number) {
   }
 }
 
-// More menu (⋮ button)
 function handleMoreClick(e: MouseEvent, item: FileItem) {
   e.stopPropagation()
   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-  quickMenu.value = { item, x: rect.right, y: rect.bottom }
-  contextMenu.value = null
+  quickMenu.value = { item, x: rect.right, y: rect.bottom + 4 }
 }
-
 
 async function handleQuickRename() {
   if (!quickMenu.value) return
@@ -200,21 +192,35 @@ async function handleQuickDelete() {
   }
 }
 
+async function downloadFile(item: FileItem) {
+  if (item.isDir) return
+  const token = localStorage.getItem('auth_token') || ''
+  const res = await fetch(getRawUrl(item.path, false), { headers: { 'X-Auth': token } })
+  if (!res.ok) throw new Error(`下载失败: ${res.statusText}`)
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = item.name
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
 
-function handleQuickDownload() {
+async function handleQuickDownload() {
   if (!quickMenu.value) return
   const item = quickMenu.value.item
   quickMenu.value = null
-  if (!item.isDir) {
-    const token = localStorage.getItem('auth_token') || ''
-    const encodedPath = item.path.split('/').map(encodeURIComponent).join('/')
-    window.open(`/api/raw/${encodedPath}?auth=${token}`, '_blank')
+  try {
+    await downloadFile(item)
+  } catch (e) {
+    alert((e as Error).message)
   }
 }
 
 function handleQuickMoveTo() {
   if (!quickMenu.value) return
-  // 选中该项，打开移动弹窗
   selectedPaths.value = new Set([quickMenu.value.item.path])
   quickMenu.value = null
   showBatchMoveModal.value = true
@@ -228,7 +234,6 @@ function handleQuickDetails() {
 
 function handleContainerClick(e: MouseEvent) {
   const target = e.target as HTMLElement
-  // Only clear if clicking on the container itself, not on an item
   if (target.closest('.file-item') || target.closest('.context-menu') || target.closest('.selection-bar')) return
   clearSelection()
   quickMenu.value = null
@@ -270,7 +275,6 @@ function navigateToBreadcrumb(path: string) {
   }
 }
 
-// Batch operations
 async function handleBatchDelete() {
   const count = selectionCount.value
   if (!confirm(`确定将 ${count} 个项目移到回收站吗？`)) return
@@ -285,12 +289,13 @@ async function handleBatchDelete() {
   }
 }
 
-function handleBatchDownload() {
-  for (const item of selectedItems.value) {
-    if (!item.isDir) {
-      const url = getRawUrl(item.path, false)
-      window.open(url, '_blank')
+async function handleBatchDownload() {
+  try {
+    for (const item of selectedItems.value) {
+      await downloadFile(item)
     }
+  } catch (e) {
+    alert((e as Error).message)
   }
 }
 
@@ -308,7 +313,6 @@ function handleBatchShare() {
   showBatchShareDialog.value = true
 }
 
-// Single-selection toolbar actions
 async function handleToolbarRename() {
   const item = singleSelectedItem.value
   if (!item) return
@@ -325,12 +329,10 @@ async function handleToolbarRename() {
   }
 }
 
-// Preview navigation
 function handlePreviewNavigate(file: FileItem) {
   previewFile.value = file
 }
 
-// Drag & drop upload
 function onDragOver(e: DragEvent) {
   e.preventDefault()
   dragOver.value = true
@@ -348,8 +350,7 @@ async function onDrop(e: DragEvent) {
   if (!items?.length) return
 
   const basePath = currentPath.value || ''
-  
-  // Check if any item is a directory (webkitGetAsEntry)
+
   const entries: any[] = []
   for (const item of items) {
     const entry = (item as any).webkitGetAsEntry?.()
@@ -357,19 +358,17 @@ async function onDrop(e: DragEvent) {
   }
 
   if (entries.length > 0) {
-    // Use entry API for full folder support
     const allFiles: Array<{ file: File; relativePath: string }> = []
-    
+
     async function readEntry(entry: any, path: string): Promise<void> {
       if (entry.isFile) {
         const file: File = await new Promise((resolve) => entry.file(resolve))
         allFiles.push({ file, relativePath: path + file.name })
       } else if (entry.isDirectory) {
         const dirPath = path + entry.name + '/'
-        // Collect dir path for creation
         const dirToCreate = basePath ? `${basePath}/${dirPath.slice(0, -1)}` : dirPath.slice(0, -1)
         try { await createFolder(dirToCreate) } catch { /* 409 ok */ }
-        
+
         const reader = entry.createReader()
         const subEntries: any[] = await new Promise((resolve) => reader.readEntries(resolve))
         for (const sub of subEntries) {
@@ -382,7 +381,6 @@ async function onDrop(e: DragEvent) {
       await readEntry(entry, '')
     }
 
-    // Upload all collected files
     let uploaded = 0
     for (const { file, relativePath } of allFiles) {
       uploaded++
@@ -400,7 +398,6 @@ async function onDrop(e: DragEvent) {
       }
     }
   } else {
-    // Fallback: plain file drop
     const files = e.dataTransfer?.files
     if (!files?.length) return
     for (const file of files) {
@@ -440,145 +437,129 @@ onBeforeUnmount(() => {
 
 <template>
   <div
-    class="p-4 md:p-6 h-full"
+    class="drive-root p-4 md:p-6 h-full"
     @dragover="onDragOver"
     @dragleave="onDragLeave"
     @drop="onDrop"
     @click="handleContainerClick"
   >
-    <!-- Selection bar (enhanced: shows Share, and for single-select shows Rename) -->
+    <!-- Selection bar -->
     <div
       v-if="selectionCount > 0"
-      class="selection-bar flex items-center gap-2 md:gap-4 mb-4 px-3 md:px-4 py-2.5 rounded-xl bg-[#d3e3fd]"
+      class="selection-bar flex items-center gap-2 mb-4 px-3 md:px-4 py-2.5 rounded-full bg-[#d3e3fd] shadow-sm"
     >
+      <button
+        type="button"
+        class="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer text-[#1a73e8] hover:bg-[#c2d7f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a73e8]/40 shrink-0"
+        title="取消选择"
+        aria-label="取消选择"
+        @click="clearSelection"
+      >
+        <span class="material-icons-round text-lg" aria-hidden="true">close</span>
+      </button>
       <span class="text-sm font-medium text-[#202124] whitespace-nowrap">已选 {{ selectionCount }} 项</span>
-      <div class="flex items-center gap-1 ml-auto flex-wrap">
-        <!-- Share (only for single non-dir file) -->
+
+      <div class="flex items-center gap-1 ml-auto flex-wrap justify-end">
         <button
           v-if="singleSelectedItem && !singleSelectedItem.isDir"
-          @click="handleBatchShare"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm cursor-pointer transition-colors text-[#202124] hover:bg-[#c2d7f9]"
+          type="button"
+          class="selection-action"
           title="分享"
+          aria-label="分享"
+          @click="handleBatchShare"
         >
-          <span class="material-icons-round text-lg">share</span>
+          <span class="material-icons-round text-[18px]" aria-hidden="true">share</span>
           <span class="hidden md:inline">分享</span>
         </button>
         <button
-          @click="handleBatchDownload"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm cursor-pointer transition-colors text-[#202124] hover:bg-[#c2d7f9]"
+          type="button"
+          class="selection-action"
           title="下载"
+          aria-label="下载"
+          @click="handleBatchDownload"
         >
-          <span class="material-icons-round text-lg">download</span>
+          <span class="material-icons-round text-[18px]" aria-hidden="true">download</span>
           <span class="hidden md:inline">下载</span>
         </button>
-        <!-- Rename (only for single selection) -->
         <button
           v-if="singleSelectedItem"
-          @click="handleToolbarRename"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm cursor-pointer transition-colors text-[#202124] hover:bg-[#c2d7f9]"
+          type="button"
+          class="selection-action"
           title="重命名"
+          aria-label="重命名"
+          @click="handleToolbarRename"
         >
-          <span class="material-icons-round text-lg">edit</span>
+          <span class="material-icons-round text-[18px]" aria-hidden="true">edit</span>
           <span class="hidden md:inline">重命名</span>
         </button>
         <button
-          @click="handleBatchDelete"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm cursor-pointer transition-colors text-[#202124] hover:bg-[#c2d7f9]"
-          title="删除"
-        >
-          <span class="material-icons-round text-lg">delete</span>
-          <span class="hidden md:inline">删除</span>
-        </button>
-        <button
-          @click="handleBatchMove"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm cursor-pointer transition-colors text-[#202124] hover:bg-[#c2d7f9]"
+          type="button"
+          class="selection-action"
           title="移动"
+          aria-label="移动"
+          @click="handleBatchMove"
         >
-          <span class="material-icons-round text-lg">drive_file_move</span>
+          <span class="material-icons-round text-[18px]" aria-hidden="true">drive_file_move</span>
           <span class="hidden md:inline">移动</span>
         </button>
         <button
-          @click="clearSelection"
-          class="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer text-[#5f6368] hover:bg-[#c2d7f9] transition-colors ml-2"
-          title="取消选择"
+          type="button"
+          class="selection-action"
+          title="删除"
+          aria-label="删除"
+          @click="handleBatchDelete"
         >
-          <span class="material-icons-round text-lg">close</span>
+          <span class="material-icons-round text-[18px]" aria-hidden="true">delete</span>
+          <span class="hidden md:inline">删除</span>
         </button>
       </div>
     </div>
 
-    <!-- Header -->
-    <div v-if="selectionCount === 0" class="flex items-center justify-between mb-4">
-      <!-- Breadcrumbs -->
-      <div class="flex items-center gap-1 text-sm min-w-0 overflow-x-auto">
+    <!-- Header: breadcrumbs + view toggle -->
+    <div v-if="selectionCount === 0" class="flex items-center justify-between gap-3 mb-5">
+      <nav class="flex items-center min-w-0 overflow-x-auto py-1" aria-label="路径">
         <template v-for="(crumb, i) in breadcrumbs" :key="crumb.path">
-          <span v-if="i > 0" class="mx-1 text-[#5f6368] shrink-0">›</span>
+          <span v-if="i > 0" class="mx-0.5 text-[#80868b] text-base shrink-0 select-none" aria-hidden="true">›</span>
           <button
+            type="button"
+            class="crumb px-2 py-1 rounded-md cursor-pointer transition-colors hover:bg-[#e8f0fe] whitespace-nowrap shrink-0 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a73e8]/40"
+            :class="i === breadcrumbs.length - 1
+              ? 'text-[#202124] font-semibold'
+              : 'text-[#5f6368]'"
+            :aria-current="i === breadcrumbs.length - 1 ? 'page' : undefined"
             @click="navigateToBreadcrumb(crumb.path)"
-            class="px-2 py-1 rounded cursor-pointer transition-colors hover:bg-[#e8f0fe] whitespace-nowrap shrink-0"
-            :class="i === breadcrumbs.length - 1 ? 'text-[#202124] font-medium' : 'text-[#5f6368]'"
           >
             {{ crumb.name }}
           </button>
-        
-    <!-- Detail Drawer (from ⋮ menu) -->
-    <Teleport to="body">
-      <div v-if="detailItem" class="fixed inset-0 z-[150]" @click="detailItem = null">
-        <div
-          class="fixed right-0 top-0 h-full w-80 bg-white shadow-2xl border-l border-[#dadce0] p-6 overflow-auto"
-          @click.stop
-        >
-          <div class="flex items-center justify-between mb-6">
-            <h3 class="text-base font-medium text-[#202124]">详情</h3>
-            <button @click="detailItem = null" class="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer hover:bg-[#e8f0fe]">
-              <span class="material-icons-round text-lg text-[#5f6368]">close</span>
-            </button>
-          </div>
-          <div class="flex flex-col items-center mb-6">
-            <span class="material-icons-round text-5xl mb-2" :class="detailItem.isDir ? 'text-[#5f6368]' : 'text-[#1a73e8]'">
-              {{ detailItem.isDir ? 'folder' : 'insert_drive_file' }}
-            </span>
-            <p class="text-sm font-medium text-[#202124] text-center break-all">{{ detailItem.name }}</p>
-          </div>
-          <div class="space-y-4 text-sm">
-            <div>
-              <p class="text-[#5f6368] mb-1">类型</p>
-              <p class="text-[#202124]">{{ detailItem.isDir ? '文件夹' : (detailItem.extension || '文件') }}</p>
-            </div>
-            <div v-if="!detailItem.isDir">
-              <p class="text-[#5f6368] mb-1">大小</p>
-              <p class="text-[#202124]">{{ formatSize(detailItem.size) }}</p>
-            </div>
-            <div>
-              <p class="text-[#5f6368] mb-1">修改时间</p>
-              <p class="text-[#202124]">{{ formatDate(detailItem.modified) }}</p>
-            </div>
-            <div>
-              <p class="text-[#5f6368] mb-1">位置</p>
-              <p class="text-[#202124]">{{ detailItem.path }}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Teleport>
-</template>
-      </div>
+        </template>
+      </nav>
 
-      <!-- View toggle -->
-      <div class="flex items-center gap-1 p-0.5 rounded-lg bg-[#e0e0e0] shrink-0 ml-2">
+      <div
+        class="view-toggle inline-flex items-center p-0.5 rounded-full bg-[#f1f3f4] border border-[#e0e3e7] shrink-0"
+        role="group"
+        aria-label="视图模式"
+      >
         <button
+          type="button"
+          class="view-toggle-btn"
+          :class="viewMode === 'grid' ? 'is-active' : ''"
+          :aria-pressed="viewMode === 'grid'"
+          title="网格视图"
+          aria-label="网格视图"
           @click="viewMode = 'grid'"
-          class="p-1.5 rounded cursor-pointer transition-colors text-[#5f6368]"
-          :class="viewMode === 'grid' ? 'bg-white' : ''"
         >
-          <span class="material-icons-round text-lg">grid_view</span>
+          <span class="material-icons-round text-[18px]" aria-hidden="true">grid_view</span>
         </button>
         <button
+          type="button"
+          class="view-toggle-btn"
+          :class="viewMode === 'list' ? 'is-active' : ''"
+          :aria-pressed="viewMode === 'list'"
+          title="列表视图"
+          aria-label="列表视图"
           @click="viewMode = 'list'"
-          class="p-1.5 rounded cursor-pointer transition-colors text-[#5f6368]"
-          :class="viewMode === 'list' ? 'bg-white' : ''"
         >
-          <span class="material-icons-round text-lg">view_list</span>
+          <span class="material-icons-round text-[18px]" aria-hidden="true">view_list</span>
         </button>
       </div>
     </div>
@@ -589,7 +570,7 @@ onBeforeUnmount(() => {
       class="fixed inset-0 z-50 flex items-center justify-center pointer-events-none bg-[#1a73e8]/10"
     >
       <div class="bg-white rounded-xl shadow-xl p-8 text-center">
-        <span class="material-icons-round text-5xl mb-2 text-[#1a73e8]">cloud_upload</span>
+        <span class="material-icons-round text-5xl mb-2 text-[#1a73e8]" aria-hidden="true">cloud_upload</span>
         <p class="text-sm font-medium text-[#202124]">拖拽文件到此处上传</p>
       </div>
     </div>
@@ -601,117 +582,85 @@ onBeforeUnmount(() => {
 
     <!-- Empty state -->
     <div v-else-if="!sortedItems.length" class="flex flex-col items-center justify-center py-20">
-      <span class="material-icons-round text-6xl mb-4 text-[#dadce0]">folder_open</span>
+      <span class="material-icons-round text-6xl mb-4 text-[#dadce0]" aria-hidden="true">folder_open</span>
       <p class="text-base text-[#5f6368]">此文件夹为空</p>
       <p class="text-sm mt-1 text-[#80868b]">拖拽文件到此处上传，或点击「+ 新建」按钮</p>
     </div>
 
     <!-- Grid View -->
-    <div v-else-if="viewMode === 'grid'" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+    <div v-else-if="viewMode === 'grid'" class="file-grid gap-3 md:gap-4 pb-6">
+      <FileCard
+        v-for="(item, index) in sortedItems"
+        :key="item.path"
+        :item="item"
+        :selected="isSelected(item)"
+        @click="(e) => handleItemClick(e, item, index)"
+        @more="(e) => handleMoreClick(e, item)"
+      />
+    </div>
+
+    <!-- List View -->
+    <div v-else class="bg-white rounded-xl overflow-hidden border border-[#e6e8eb] shadow-sm">
+      <div class="file-list-row file-list-row--head px-4 py-3 text-xs font-medium text-[#5f6368] border-b border-[#ebedf0] select-none">
+        <button
+          type="button"
+          class="flex items-center gap-1 cursor-pointer hover:text-[#202124] transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a73e8]/40 rounded px-1 -ml-1 w-fit"
+          @click="toggleSort('name')"
+        >
+          名称
+          <span v-if="getSortIcon('name')" class="material-icons-round text-[14px]" aria-hidden="true">{{ getSortIcon('name') }}</span>
+        </button>
+        <button
+          type="button"
+          class="hidden md:flex items-center gap-1 cursor-pointer hover:text-[#202124] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a73e8]/40 rounded px-1 w-fit"
+          @click="toggleSort('modified')"
+        >
+          修改时间
+          <span v-if="getSortIcon('modified')" class="material-icons-round text-[14px]" aria-hidden="true">{{ getSortIcon('modified') }}</span>
+        </button>
+        <button
+          type="button"
+          class="hidden md:flex items-center gap-1 justify-end cursor-pointer hover:text-[#202124] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a73e8]/40 rounded px-1 w-fit ml-auto"
+          @click="toggleSort('size')"
+        >
+          大小
+          <span v-if="getSortIcon('size')" class="material-icons-round text-[14px]" aria-hidden="true">{{ getSortIcon('size') }}</span>
+        </button>
+        <span class="sr-only">操作</span>
+      </div>
+
       <div
         v-for="(item, index) in sortedItems"
         :key="item.path"
-        class="file-item group bg-white rounded-xl cursor-pointer transition-all overflow-hidden border"
-        :class="isSelected(item)
-          ? 'border-[#1a73e8] bg-[#d3e3fd]'
-          : 'border-[#e0e0e0] hover:border-[#1a73e8]'"
+        class="file-item file-list-row px-4 py-2.5 cursor-pointer transition-colors border-b border-[#f1f3f4] last:border-b-0"
+        :class="isSelected(item) ? 'bg-[#e8f0fe]' : 'hover:bg-[#f8f9fa]'"
         @click="handleItemClick($event, item, index)"
-              >
-        <!-- Thumbnail area -->
-        <div
-          class="h-28 md:h-36 flex items-center justify-center overflow-hidden relative"
-          :class="isSelected(item)
-            ? 'bg-[#c2d7f9]'
-            : item.isDir ? 'bg-[#e8f0fe]' : 'bg-[#f8f9fa]'"
-        >
-          <AuthImage v-if="!item.isDir && isImageFile(item.extension)" :path="item.path" :alt="item.name" />
+      >
+        <div class="flex items-center gap-3 min-w-0">
           <span
-            v-else
-            class="material-icons-round"
+            class="material-icons-round text-[20px] shrink-0"
             :class="item.isDir ? 'text-[#5f6368]' : 'text-[#1a73e8]'"
-            style="font-size: 48px"
+            aria-hidden="true"
           >
             {{ getFileIcon(item.extension, item.isDir) }}
           </span>
+          <span class="text-sm truncate text-[#202124]" :title="item.name">{{ item.name }}</span>
         </div>
-        <!-- Info -->
-        <div class="px-3 py-2.5 flex items-center gap-2 border-t" :class="isSelected(item) ? 'border-[#1a73e8]/30' : 'border-[#e0e0e0]'">
-          <span
-            class="material-icons-round text-lg shrink-0"
-            :class="item.isDir ? 'text-[#5f6368]' : 'text-[#1a73e8]'"
-          >
-            {{ getFileIcon(item.extension, item.isDir) }}
-          </span>
-          <div class="min-w-0 flex-1">
-            <p class="text-sm truncate text-[#202124]">{{ item.name }}</p>
-            <p v-if="!item.isDir" class="text-xs text-[#5f6368]">{{ formatSize(item.size) }}</p>
-          </div>
+        <div class="text-xs text-[#5f6368] hidden md:block truncate">{{ formatDate(item.modified) }}</div>
+        <div class="text-xs text-right text-[#5f6368] hidden md:block">{{ item.isDir ? '—' : formatSize(item.size) }}</div>
+        <div class="flex justify-end">
           <button
-            @click="handleMoreClick($event, item)"
-            class="w-7 h-7 rounded-full flex items-center justify-center cursor-pointer hover:bg-[#e8f0fe] transition-colors"
+            type="button"
+            class="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer text-[#5f6368] hover:bg-[#e8f0fe] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a73e8]/40 transition-colors shrink-0"
+            :aria-label="`${item.name} 更多操作`"
             title="更多操作"
+            @click.stop="handleMoreClick($event, item)"
           >
-            <span class="material-icons-round text-lg text-[#5f6368]">more_vert</span>
+            <span class="material-icons-round text-[18px]" aria-hidden="true">more_vert</span>
           </button>
         </div>
       </div>
     </div>
-
-    <!-- List View -->
-    <div v-else class="bg-white rounded-xl overflow-hidden border border-[#e0e0e0]">
-      <!-- Header -->
-      <div class="flex items-center px-4 py-3 text-xs font-medium text-[#5f6368] border-b border-[#e0e0e0] select-none">
-        <button
-          @click="toggleSort('name')"
-          class="flex-1 flex items-center gap-1 cursor-pointer hover:text-[#202124] transition-colors text-left"
-        >
-          名称
-          <span v-if="getSortIcon('name')" class="material-icons-round text-xs">{{ getSortIcon('name') }}</span>
-        </button>
-        <button
-          @click="toggleSort('modified')"
-          class="w-40 hidden md:flex items-center gap-1 cursor-pointer hover:text-[#202124] transition-colors"
-        >
-          修改时间
-          <span v-if="getSortIcon('modified')" class="material-icons-round text-xs">{{ getSortIcon('modified') }}</span>
-        </button>
-        <button
-          @click="toggleSort('size')"
-          class="w-24 hidden md:flex items-center gap-1 justify-end cursor-pointer hover:text-[#202124] transition-colors"
-        >
-          大小
-          <span v-if="getSortIcon('size')" class="material-icons-round text-xs">{{ getSortIcon('size') }}</span>
-        </button>
-      </div>
-      <!-- Rows -->
-      <div
-        v-for="(item, index) in sortedItems"
-        :key="item.path"
-        class="file-item group flex items-center px-4 py-2.5 cursor-pointer transition-colors border-b border-[#f1f3f4]"
-        :class="isSelected(item) ? 'bg-[#d3e3fd]' : 'hover:bg-[#f8f9fa]'"
-        @click="handleItemClick($event, item, index)"
-              >
-        <div class="flex items-center gap-3 flex-1 min-w-0">
-          <span
-            class="material-icons-round text-xl shrink-0"
-            :class="item.isDir ? 'text-[#5f6368]' : 'text-[#1a73e8]'"
-          >
-            {{ getFileIcon(item.extension, item.isDir) }}
-          </span>
-          <span class="text-sm truncate text-[#202124]">{{ item.name }}</span>
-        </div>
-        <div class="w-40 text-xs text-[#5f6368] hidden md:block">{{ formatDate(item.modified) }}</div>
-        <div class="w-24 text-xs text-right text-[#5f6368] hidden md:block mr-2">{{ item.isDir ? '—' : formatSize(item.size) }}</div>
-        <button
-          @click="handleMoreClick($event, item)"
-          class="w-8 h-8 ml-4 rounded-full flex items-center justify-center cursor-pointer hover:bg-[#e8f0fe] transition-colors"
-          title="更多操作"
-        >
-          <span class="material-icons-round text-lg text-[#5f6368]">more_vert</span>
-        </button>
-      </div>
-    </div>
-
 
     <!-- Quick Actions Menu (⋮ button) -->
     <Teleport to="body">
@@ -721,60 +670,73 @@ onBeforeUnmount(() => {
         @click="quickMenu = null"
       >
         <div
-          class="fixed bg-white rounded-lg shadow-xl py-1 z-[100] w-52 border border-[#dadce0]"
+          class="context-menu fixed bg-white rounded-xl shadow-xl py-1.5 z-[100] w-52 border border-[#dadce0]"
           :style="quickMenuStyle"
+          role="menu"
           @click.stop
         >
           <button
-            v-if="quickMenu && !quickMenu.item.isDir"
+            v-if="!quickMenu.item.isDir"
+            type="button"
+            class="quick-menu-item"
+            role="menuitem"
             @click="handleQuickDownload()"
-            class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left cursor-pointer transition-colors text-[#202124] hover:bg-[#f5f5f5]"
           >
-            <span class="material-icons-round text-lg text-[#5f6368]">download</span>
+            <span class="material-icons-round text-[18px] text-[#5f6368]" aria-hidden="true">download</span>
             下载
           </button>
           <button
+            type="button"
+            class="quick-menu-item"
+            role="menuitem"
             @click="handleQuickRename()"
-            class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left cursor-pointer transition-colors text-[#202124] hover:bg-[#f5f5f5]"
           >
-            <span class="material-icons-round text-lg text-[#5f6368]">edit</span>
+            <span class="material-icons-round text-[18px] text-[#5f6368]" aria-hidden="true">edit</span>
             重命名
           </button>
           <button
+            type="button"
+            class="quick-menu-item"
+            role="menuitem"
             @click="handleQuickShare()"
-            class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left cursor-pointer transition-colors text-[#202124] hover:bg-[#f5f5f5]"
           >
-            <span class="material-icons-round text-lg text-[#5f6368]">link</span>
+            <span class="material-icons-round text-[18px] text-[#5f6368]" aria-hidden="true">link</span>
             分享链接
           </button>
           <button
+            type="button"
+            class="quick-menu-item"
+            role="menuitem"
             @click="handleQuickMoveTo()"
-            class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left cursor-pointer transition-colors text-[#202124] hover:bg-[#f5f5f5]"
           >
-            <span class="material-icons-round text-lg text-[#5f6368]">drive_file_move</span>
+            <span class="material-icons-round text-[18px] text-[#5f6368]" aria-hidden="true">drive_file_move</span>
             移动到
           </button>
-          <div class="border-t border-[#e0e0e0] my-1"></div>
+          <div class="h-px bg-[#ebedf0] my-1"></div>
           <button
+            type="button"
+            class="quick-menu-item quick-menu-item--danger"
+            role="menuitem"
             @click="handleQuickDelete()"
-            class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left cursor-pointer transition-colors text-[#e53935] hover:bg-[#fbe9e7]"
           >
-            <span class="material-icons-round text-lg">delete</span>
+            <span class="material-icons-round text-[18px]" aria-hidden="true">delete</span>
             删除
           </button>
-          <div class="border-t border-[#e0e0e0] my-1"></div>
+          <div class="h-px bg-[#ebedf0] my-1"></div>
           <button
+            type="button"
+            class="quick-menu-item"
+            role="menuitem"
             @click="handleQuickDetails()"
-            class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left cursor-pointer transition-colors text-[#202124] hover:bg-[#f5f5f5]"
           >
-            <span class="material-icons-round text-lg text-[#5f6368]">info</span>
+            <span class="material-icons-round text-[18px] text-[#5f6368]" aria-hidden="true">info</span>
             详情
           </button>
         </div>
       </div>
     </Teleport>
 
-    <!-- Context Menu removed: all functions moved to ⋮ button --><!-- File Preview -->
+    <!-- File Preview -->
     <Teleport to="body">
       <FilePreview
         v-if="previewFile"
@@ -804,7 +766,7 @@ onBeforeUnmount(() => {
       />
     </Teleport>
 
-    <!-- Share Dialog (from quick menu / context menu) -->
+    <!-- Share Dialog (from quick menu) -->
     <Teleport to="body">
       <ShareDialog
         v-if="shareItem"
@@ -813,48 +775,117 @@ onBeforeUnmount(() => {
       />
     </Teleport>
 
+    <!-- Detail Drawer -->
+    <DriveDetailDrawer
+      v-if="detailItem"
+      :item="detailItem"
+      @close="detailItem = null"
+    />
+
     <!-- Upload Toast -->
     <UploadToast />
   </div>
-
-    <!-- Detail Drawer (from ⋮ menu) -->
-    <Teleport to="body">
-      <div v-if="detailItem" class="fixed inset-0 z-[150]" @click="detailItem = null">
-        <div
-          class="fixed right-0 top-0 h-full w-80 bg-white shadow-2xl border-l border-[#dadce0] p-6 overflow-auto"
-          @click.stop
-        >
-          <div class="flex items-center justify-between mb-6">
-            <h3 class="text-base font-medium text-[#202124]">详情</h3>
-            <button @click="detailItem = null" class="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer hover:bg-[#e8f0fe]">
-              <span class="material-icons-round text-lg text-[#5f6368]">close</span>
-            </button>
-          </div>
-          <div class="flex flex-col items-center mb-6">
-            <span class="material-icons-round text-5xl mb-2" :class="detailItem.isDir ? 'text-[#5f6368]' : 'text-[#1a73e8]'">
-              {{ detailItem.isDir ? 'folder' : 'insert_drive_file' }}
-            </span>
-            <p class="text-sm font-medium text-[#202124] text-center break-all">{{ detailItem.name }}</p>
-          </div>
-          <div class="space-y-4 text-sm">
-            <div>
-              <p class="text-[#5f6368] mb-1">类型</p>
-              <p class="text-[#202124]">{{ detailItem.isDir ? '文件夹' : (detailItem.extension || '文件') }}</p>
-            </div>
-            <div v-if="!detailItem.isDir">
-              <p class="text-[#5f6368] mb-1">大小</p>
-              <p class="text-[#202124]">{{ formatSize(detailItem.size) }}</p>
-            </div>
-            <div>
-              <p class="text-[#5f6368] mb-1">修改时间</p>
-              <p class="text-[#202124]">{{ formatDate(detailItem.modified) }}</p>
-            </div>
-            <div>
-              <p class="text-[#5f6368] mb-1">位置</p>
-              <p class="text-[#202124]">{{ detailItem.path }}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Teleport>
 </template>
+
+<style scoped>
+.file-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+@media (min-width: 640px) {
+  .file-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+}
+@media (min-width: 1024px) {
+  .file-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+}
+
+.file-list-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 3rem;
+  align-items: center;
+  column-gap: 12px;
+}
+@media (min-width: 768px) {
+  .file-list-row {
+    grid-template-columns: minmax(0, 1fr) 10rem 6rem 3rem;
+  }
+}
+
+.selection-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-size: 13px;
+  line-height: 1;
+  color: #1f1f1f;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.selection-action:hover {
+  background: rgba(26, 115, 232, 0.12);
+}
+.selection-action:focus-visible {
+  outline: none;
+  background: rgba(26, 115, 232, 0.18);
+  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.4);
+}
+
+.view-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 28px;
+  border-radius: 9999px;
+  color: #5f6368;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.view-toggle-btn:hover {
+  color: #202124;
+}
+.view-toggle-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.4);
+}
+.view-toggle-btn.is-active {
+  background: #ffffff;
+  color: #1a73e8;
+  box-shadow: 0 1px 2px rgba(60, 64, 67, 0.15);
+}
+
+.quick-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: #202124;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+.quick-menu-item:hover,
+.quick-menu-item:focus-visible {
+  background: #f1f3f4;
+  outline: none;
+}
+.quick-menu-item--danger {
+  color: #d93025;
+}
+.quick-menu-item--danger .material-icons-round {
+  color: #d93025 !important;
+}
+.quick-menu-item--danger:hover,
+.quick-menu-item--danger:focus-visible {
+  background: #fce8e6;
+}
+</style>
