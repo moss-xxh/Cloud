@@ -1,51 +1,227 @@
 @import "tailwindcss";
 
 @theme {
+  --font-sans: Inter, "Noto Sans SC", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
   --color-primary: #1a73e8;
-  --color-primary-hover: #1557b0;
-  --color-bg: #f8f9fa;
-  --color-sidebar: #ffffff;
-  --color-text: #202124;
-  --color-border: #dadce0;
-  --color-hover: #e8f0fe;
-  --color-selected: #d3e3fd;
-  --font-sans: 'Google Sans', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  --color-primary-hover: #1668d6;
+  --color-primary-soft: #eaf2fd;
+  --color-page-bg: #f5f3ff;
+  --color-surface: #ffffff;
+  --color-text-primary: #1f2937;
+  --color-text-secondary: #5f6368;
+  --color-text-muted: #9aa3af;
+  --color-border: rgba(60, 80, 140, 0.10);
+  --color-border-soft: rgba(60, 80, 140, 0.06);
 }
 
-body {
-  margin: 0;
-  font-family: var(--font-sans);
-  background: var(--color-bg);
-  color: var(--color-text);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+:root {
+  color-scheme: light;
+
+  /* v3 brand (google) */
+  --cd-primary: #1a73e8;
+  --cd-primary-hover: #1668d6;
+  --cd-primary-dim: #1557b8;
+  --cd-primary-soft: #eaf2fd;
+
+  /* glass surface — lavender → violet → mint canvas with translucent panels */
+  --cd-canvas-grad: linear-gradient(135deg, #e0e7ff 0%, #f5f3ff 40%, #ecfeff 100%);
+  --cd-chrome: rgba(255, 255, 255, 0.55);
+  --cd-chrome-blur: blur(24px) saturate(160%);
+  --cd-card: rgba(255, 255, 255, 0.62);
+  --cd-section-tone: rgba(255, 255, 255, 0.4);
+  --cd-search-bg: rgba(255, 255, 255, 0.55);
+  --cd-chip-bg: rgba(255, 255, 255, 0.7);
+  --cd-storage-bg: rgba(255, 255, 255, 0.5);
+
+  --cd-line: rgba(60, 80, 140, 0.10);
+  --cd-line-soft: rgba(60, 80, 140, 0.06);
+  --cd-border-glass: rgba(255, 255, 255, 0.8);
+
+  --cd-text-primary: #1e293b;
+  --cd-text-secondary: #5f6368;
+  --cd-text-muted: #9aa3af;
+
+  /* file-type accents — corner badge ONLY */
+  --cd-file-pdf:  #ea4335;
+  --cd-file-doc:  #1a73e8;
+  --cd-file-xls:  #34a853;
+  --cd-file-ppt:  #fbbc04;
+  --cd-file-fig:  #a142f4;
+  --cd-file-img:  #ff6d00;
+  --cd-file-mp4:  #e91e63;
+  --cd-file-aud:  #00897b;
+  --cd-folder-default: #5f6368;
+
+  /* roomy density */
+  --cd-pad-x: 40px;
+  --cd-card-h: 208px;
+  --cd-folder-h: 84px;
+  --cd-grid-gap: 18px;
+  --cd-section-gap: 36px;
+  --cd-nav-h: 44px;
+
+  --cd-radius-control: 16px;
+  --cd-radius-card: 16px;
+  --cd-radius-panel: 20px;
+  --cd-radius-dialog: 24px;
+  --cd-radius-pill: 999px;
+
+  --cd-shadow-card:  0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 8px 24px -10px rgba(60, 80, 140, 0.18);
+  --cd-shadow-card-hover: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 14px 32px -10px rgba(60, 80, 140, 0.24);
+  --cd-shadow-panel: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 8px 24px -10px rgba(60, 80, 140, 0.14);
+  --cd-shadow-login: 0 1px 0 rgba(255, 255, 255, 0.9) inset,
+                     0 30px 80px -20px rgba(60, 80, 140, 0.25),
+                     0 10px 30px -8px rgba(60, 80, 140, 0.12);
+
+  --cd-transition: 150ms ease-out;
 }
 
 * {
   box-sizing: border-box;
 }
 
-/* Reserve keyboard-only focus rings; mouse/touch activations stay quiet.
-   Browsers that support :focus-visible already do this, but this guards
-   against older engines that still paint an outline on :focus. */
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--cd-canvas-grad);
+  color: var(--cd-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
 :focus:not(:focus-visible) {
   outline: none;
 }
 
-/* Subtle custom scrollbars on webkit browsers so the file list doesn't look
-   like a raw browser view. */
+/* ─── Compat: classes used by AppLayout / FileCard / DriveView ─── */
+
+.cd-app-bg {
+  background: var(--cd-canvas-grad);
+  color: var(--cd-text-primary);
+  min-height: 100%;
+}
+
+.cd-glass-surface {
+  background: var(--cd-chrome);
+  backdrop-filter: var(--cd-chrome-blur);
+  -webkit-backdrop-filter: var(--cd-chrome-blur);
+  border: 1px solid var(--cd-border-glass);
+}
+
+.cd-panel {
+  border-radius: var(--cd-radius-panel);
+  /* perf: opaque-ish bg instead of blur — only one panel on the page */
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--cd-border-glass);
+  box-shadow: var(--cd-shadow-panel);
+}
+
+.cd-primary-button {
+  border-radius: var(--cd-radius-control);
+  background: var(--cd-primary);
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  transition: background-color var(--cd-transition), opacity var(--cd-transition);
+}
+
+.cd-primary-button:hover {
+  background: var(--cd-primary-hover);
+}
+
+.cd-primary-button:active {
+  background: var(--cd-primary-dim);
+}
+
+.cd-primary-button:disabled {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.cd-input {
+  border-radius: var(--cd-radius-control);
+  border: 1px solid transparent;
+  /* perf: opaque-ish, no blur (search box appears many times) */
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--cd-text-primary);
+  transition: border-color var(--cd-transition), background-color var(--cd-transition);
+}
+
+.cd-input::placeholder {
+  color: var(--cd-text-muted);
+}
+
+.cd-input:focus,
+.cd-input:focus-within {
+  border-color: var(--cd-primary);
+  background: rgba(255, 255, 255, 0.85);
+  outline: none;
+}
+
+.cd-file-card {
+  border-radius: var(--cd-radius-card);
+  border: 1px solid var(--cd-border-glass);
+  /* perf-critical: NO backdrop-filter here. With dozens of cards each filter
+     creates its own GPU compositing layer, killing scroll/load perf. Use a
+     near-opaque tint so the visual difference vs. glass is minimal. */
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: var(--cd-shadow-card);
+  transition: transform var(--cd-transition), box-shadow var(--cd-transition), border-color var(--cd-transition);
+}
+
+.cd-file-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--cd-shadow-card-hover);
+}
+
+.cd-file-card.is-selected {
+  border-color: var(--cd-primary);
+  box-shadow: var(--cd-shadow-card-hover), 0 0 0 3px rgba(26, 115, 232, 0.12);
+}
+
+.cd-icon-tile {
+  border-radius: 16px;
+  /* perf: no blur — icon tiles can repeat */
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--cd-border-glass);
+  box-shadow: 0 4px 12px rgba(60, 80, 140, 0.10);
+}
+
+.cd-text-primary { color: var(--cd-text-primary); }
+.cd-text-secondary { color: var(--cd-text-secondary); }
+.cd-text-muted { color: var(--cd-text-muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #dadce0;
+  background: rgba(60, 80, 140, 0.20);
   border: 2px solid transparent;
   background-clip: padding-box;
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #bdc1c6;
+  background: rgba(60, 80, 140, 0.32);
   background-clip: padding-box;
   border: 2px solid transparent;
 }

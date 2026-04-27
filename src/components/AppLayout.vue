@@ -44,6 +44,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { key: 'drive', icon: 'folder', label: '我的云盘', route: 'drive-root' },
   { key: 'shared', icon: 'people', label: '共享', route: 'shared' },
+  { key: 'recent', icon: 'schedule', label: '最近', route: 'drive-root' },
   { key: 'starred', icon: 'star', label: '星标', route: 'starred' },
   { key: 'trash', icon: 'delete', label: '回收站', route: 'trash' }
 ]
@@ -114,9 +115,9 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="h-screen flex flex-col bg-[#f8f9fa]">
+  <div class="h-screen flex flex-col cd-app-bg">
     <!-- Top bar -->
-    <header class="h-16 flex items-center px-4 shrink-0 bg-white border-b border-[#dadce0]">
+    <header class="cd-glass-surface h-16 flex items-center px-4 shrink-0 border-x-0 border-t-0 rounded-none shadow-[0_8px_30px_rgba(31,45,75,0.05)]">
       <!-- Mobile: hamburger + logo -->
       <div class="flex items-center gap-2 md:w-64 shrink-0">
         <button
@@ -126,12 +127,14 @@ onBeforeUnmount(() => {
         >
           <span class="material-icons-round text-2xl">menu</span>
         </button>
-        <span class="text-2xl">☁️</span>
-        <span class="text-lg font-medium text-[#202124] hidden md:inline">云盘</span>
+        <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-[#1a73e8] text-white shadow-[0_8px_18px_rgba(26,115,232,0.18)]">
+          <span class="material-icons-round text-[20px]">cloud</span>
+        </span>
+        <span class="text-lg font-semibold tracking-[-0.02em] text-[#172033] hidden md:inline">Cloud Drive</span>
       </div>
       <div class="flex-1 max-w-2xl mx-auto">
-        <form @submit.prevent="handleSearch" class="flex items-center rounded-full px-4 py-2 bg-[#f1f3f4]">
-          <span class="material-icons-round text-xl mr-3 text-[#5f6368]">search</span>
+        <form @submit.prevent="handleSearch" class="cd-input flex items-center px-4 py-2.5 shadow-[0_8px_24px_rgba(31,45,75,0.05)]">
+          <span class="material-icons-round text-xl mr-3 text-[#667085]">search</span>
           <input
             v-model="searchQuery"
             type="text"
@@ -151,10 +154,11 @@ onBeforeUnmount(() => {
       <div class="md:w-64 flex justify-end shrink-0">
         <button
           @click="handleLogout"
-          class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium text-white cursor-pointer bg-[#1a73e8] hover:bg-[#1557b0]"
+          class="flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-white px-2.5 py-1 text-sm font-medium text-[#1f2937] cursor-pointer hover:bg-[#f8fafc]"
           title="退出登录"
         >
-          A
+          <span class="hidden md:inline">张伟</span>
+          <span class="flex h-7 w-7 items-center justify-center rounded-full bg-[#1a73e8] text-xs font-semibold text-white">张</span>
         </button>
       </div>
     </header>
@@ -171,7 +175,7 @@ onBeforeUnmount(() => {
 
       <!-- Sidebar -->
       <aside
-        class="sidebar-panel w-64 shrink-0 flex flex-col p-3 bg-white border-r border-[#e0e0e0] z-40"
+        class="sidebar-panel cd-glass-surface w-64 shrink-0 flex flex-col p-3 border-y-0 border-l-0 rounded-none z-40"
         :class="{
           'fixed inset-y-0 left-0 top-16': isMobile,
           'translate-x-0': sidebarOpen,
@@ -182,9 +186,11 @@ onBeforeUnmount(() => {
         <div class="relative mb-4">
           <button
             @click="showNewMenu = !showNewMenu"
-            class="flex items-center gap-3 px-6 py-3.5 rounded-2xl shadow-md text-sm font-medium cursor-pointer transition-shadow hover:shadow-lg bg-white text-[#202124] border border-[#dadce0]"
+            class="flex items-center gap-3 px-6 py-3.5 rounded-2xl text-sm font-semibold cursor-pointer transition-all duration-200 bg-white text-[#1f2937] border border-[#e5e7eb] shadow-[0_1px_2px_rgba(15,23,42,0.03)] hover:bg-[#f8fafc]"
           >
-            <span class="material-icons-round text-2xl text-[#1a73e8]">add</span>
+            <span class="flex h-7 w-7 items-center justify-center rounded-[10px] bg-[#1a73e8]">
+              <span class="material-icons-round text-base text-white">add</span>
+            </span>
             新建
           </button>
           <NewMenu v-if="showNewMenu" @close="showNewMenu = false" />
@@ -195,8 +201,8 @@ onBeforeUnmount(() => {
             v-for="item in navItems"
             :key="item.key"
             @click="navigateTo(item.route)"
-            class="w-full flex items-center gap-3 px-4 py-2 rounded-full text-sm cursor-pointer transition-colors text-[#202124]"
-            :class="isActive(item.key) ? 'bg-[#d3e3fd] font-semibold' : 'hover:bg-[#e8f0fe]'"
+            class="nav-item relative w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm cursor-pointer transition-all duration-200 text-[#344054]"
+            :class="isActive(item.key) ? 'is-active font-semibold' : 'hover:bg-white/75 hover:shadow-[0_8px_20px_rgba(31,45,75,0.05)]'"
           >
             <span class="material-icons-round text-xl">{{ item.icon }}</span>
             {{ item.label }}
@@ -204,20 +210,24 @@ onBeforeUnmount(() => {
         </nav>
 
         <!-- Storage usage -->
-        <div class="mt-auto pt-4 px-2 border-t border-[#e0e0e0]">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="material-icons-round text-lg text-[#5f6368]">cloud</span>
-            <span class="text-xs text-[#5f6368]">存储空间</span>
+        <div class="cd-panel mt-auto p-4">
+          <div class="flex items-center justify-between gap-2 mb-3">
+            <div class="flex items-center gap-2">
+              <span class="material-icons-round text-lg text-[#1a73e8]">cloud</span>
+              <span class="text-xs font-semibold text-[#536079]">存储空间</span>
+            </div>
+            <span class="text-xs font-semibold text-[#1a73e8]">{{ usagePercent }}%</span>
           </div>
-          <div class="w-full h-1 rounded-full bg-[#e0e0e0]">
+          <div class="w-full h-2 rounded-full bg-[#e6edf7] p-0.5">
             <div
-              class="h-full rounded-full transition-all"
+              class="h-full rounded-full transition-all duration-500"
               :style="{ width: usagePercent + '%', background: usageBarColor }"
             ></div>
           </div>
-          <p class="text-xs mt-1 text-[#5f6368]">
+          <p class="text-xs mt-2 text-[#667085]">
             已使用 {{ formatSize(usage.used) }} / {{ formatSize(usage.total) }}
           </p>
+          <button type="button" class="mt-2 text-xs text-[#667085] underline underline-offset-4 decoration-black/15 hover:text-[#1a73e8]">联系 IT 扩容</button>
         </div>
       </aside>
 
@@ -232,6 +242,22 @@ onBeforeUnmount(() => {
 <style scoped>
 .sidebar-panel {
   transition: transform 0.25s ease;
+}
+
+.nav-item.is-active {
+  color: #1557d6;
+  background: linear-gradient(90deg, rgba(26, 115, 232, 0.14), rgba(66, 133, 244, 0.06));
+  box-shadow: 0 10px 24px rgba(26, 115, 232, 0.08);
+}
+.nav-item.is-active::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 999px;
+  background: #1a73e8;
 }
 
 .overlay-fade-enter-active,

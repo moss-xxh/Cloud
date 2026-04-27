@@ -15,6 +15,7 @@ const router = useRouter()
 
 const items = ref<FileItem[]>([])
 const loading = ref(false)
+const loadError = ref('')
 const viewMode = ref<'grid' | 'list'>(localStorage.getItem('viewMode') as any || 'grid')
 const dragOver = ref(false)
 
@@ -93,6 +94,9 @@ const sortedItems = computed(() => {
 const selectedItems = computed(() =>
   sortedItems.value.filter(i => selectedPaths.value.has(i.path))
 )
+
+const folderItems = computed(() => sortedItems.value.filter(i => i.isDir))
+const fileItems = computed(() => sortedItems.value.filter(i => !i.isDir))
 
 const selectionCount = computed(() => selectedPaths.value.size)
 
@@ -255,12 +259,14 @@ function getSortIcon(field: string): string {
 
 async function loadFiles() {
   loading.value = true
+  loadError.value = ''
   try {
     const data = await getResources(currentPath.value)
     items.value = data.items || []
   } catch (e) {
     console.error('Failed to load files:', e)
     items.value = []
+    loadError.value = (e as Error).message || '网络错误，请稍后重试'
   } finally {
     loading.value = false
     clearSelection()
@@ -437,7 +443,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div
-    class="drive-root p-4 md:p-6 h-full"
+    class="drive-root h-full cd-app-bg p-4 md:p-6"
     @dragover="onDragOver"
     @dragleave="onDragLeave"
     @drop="onDrop"
@@ -516,13 +522,14 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- Header: breadcrumbs + view toggle -->
-    <div v-if="selectionCount === 0" class="flex items-center justify-between gap-3 mb-5">
-      <nav class="flex items-center min-w-0 overflow-x-auto py-1" aria-label="路径">
+    <div class="cd-panel mb-6 flex items-center justify-between gap-3 px-4 py-3 md:px-5">
+      <div class="min-w-0">
+        <nav class="mb-2 flex items-center min-w-0 overflow-x-auto py-1" aria-label="路径">
         <template v-for="(crumb, i) in breadcrumbs" :key="crumb.path">
           <span v-if="i > 0" class="mx-0.5 text-[#80868b] text-base shrink-0 select-none" aria-hidden="true">›</span>
           <button
             type="button"
-            class="crumb px-2 py-1 rounded-md cursor-pointer transition-colors hover:bg-[#e8f0fe] whitespace-nowrap shrink-0 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a73e8]/40"
+            class="crumb px-3 py-1.5 rounded-xl cursor-pointer transition-all duration-200 hover:bg-[#eef4ff] whitespace-nowrap shrink-0 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a73e8]/40"
             :class="i === breadcrumbs.length - 1
               ? 'text-[#202124] font-semibold'
               : 'text-[#5f6368]'"
@@ -532,10 +539,22 @@ onBeforeUnmount(() => {
             {{ crumb.name }}
           </button>
         </template>
-      </nav>
+        </nav>
+        <h1 class="truncate text-[28px] font-bold tracking-[-0.03em] text-[#1f2937]">{{ breadcrumbs[breadcrumbs.length - 1]?.name || '我的云盘' }}</h1>
+      </div>
 
-      <div
-        class="view-toggle inline-flex items-center p-0.5 rounded-full bg-[#f1f3f4] border border-[#e0e3e7] shrink-0"
+      <div class="flex items-center gap-2 shrink-0">
+        <button type="button" class="hidden md:inline-flex h-8 items-center gap-1 rounded-full border border-[#e5e7eb] bg-white px-3 text-[13px] font-medium text-[#1f2937]">
+          <span class="material-icons-round text-[14px] text-[#667085]">sort</span>名称
+          <span class="material-icons-round text-[12px] text-[#667085]">expand_more</span>
+        </button>
+        <button type="button" class="hidden md:inline-flex h-8 items-center gap-1 rounded-full border border-[#e5e7eb] bg-white px-3 text-[13px] font-medium text-[#1f2937]">
+          <span class="material-icons-round text-[14px] text-[#667085]">filter_list</span>类型
+        </button>
+        <button type="button" class="hidden md:inline-flex h-8 items-center rounded-full border border-[#e5e7eb] bg-white px-3 text-[13px] font-medium text-[#1f2937]">所有人</button>
+
+        <div
+        class="view-toggle inline-flex items-center p-1 rounded-2xl bg-[#eef4ff] border border-white/80 shadow-inner shrink-0"
         role="group"
         aria-label="视图模式"
       >
@@ -563,44 +582,98 @@ onBeforeUnmount(() => {
         </button>
       </div>
     </div>
+    </div>
 
     <!-- Drag overlay -->
     <div
       v-if="dragOver"
-      class="fixed inset-0 z-50 flex items-center justify-center pointer-events-none bg-[#1a73e8]/10"
+      class="fixed inset-0 z-50 flex items-center justify-center pointer-events-none bg-[#1a73e8]/10 backdrop-blur-sm"
     >
-      <div class="bg-white rounded-xl shadow-xl p-8 text-center">
+      <div class="cd-panel bg-white/90 rounded-[32px] p-8 text-center">
         <span class="material-icons-round text-5xl mb-2 text-[#1a73e8]" aria-hidden="true">cloud_upload</span>
         <p class="text-sm font-medium text-[#202124]">拖拽文件到此处上传</p>
       </div>
     </div>
 
-    <!-- Loading -->
-    <div v-if="loading" class="flex items-center justify-center py-20">
-      <div class="animate-spin rounded-full h-8 w-8 border-2 border-[#1a73e8] border-t-transparent"></div>
+    <!-- Loading skeleton -->
+    <div v-if="loading" class="space-y-7 pb-6">
+      <section>
+        <div class="mb-3 flex items-center gap-2">
+          <div class="h-4 w-14 animate-pulse rounded bg-[#e7ebf0]"></div>
+          <div class="h-3 w-5 animate-pulse rounded bg-[#eef0f3]"></div>
+        </div>
+        <div class="file-grid gap-5 md:gap-6">
+          <div v-for="n in 6" :key="`folder-skeleton-${n}`" class="h-[84px] animate-pulse rounded-2xl border border-[#eef0f3] bg-white"></div>
+        </div>
+      </section>
+      <section>
+        <div class="mb-3 flex items-center gap-2">
+          <div class="h-4 w-10 animate-pulse rounded bg-[#e7ebf0]"></div>
+          <div class="h-3 w-5 animate-pulse rounded bg-[#eef0f3]"></div>
+        </div>
+        <div class="file-grid gap-5 md:gap-6">
+          <div v-for="n in 8" :key="`file-skeleton-${n}`" class="h-[208px] animate-pulse rounded-2xl border border-[#eef0f3] bg-white"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Error state -->
+    <div v-else-if="loadError" class="cd-panel mx-auto mt-10 flex max-w-md flex-col items-center justify-center px-8 py-16 text-center">
+      <span class="material-icons-round text-6xl mb-4 text-[#ea4335]" aria-hidden="true">cloud_off</span>
+      <p class="text-base font-semibold text-[#344054]">网络错误</p>
+      <p class="text-sm mt-2 text-[#7b8496]">{{ loadError }}</p>
+      <div class="mt-5 flex items-center gap-3">
+        <button type="button" class="rounded-xl bg-[#1a73e8] px-4 py-2 text-sm font-semibold text-white" @click="loadFiles">重试</button>
+        <button type="button" class="text-sm text-[#667085] underline underline-offset-4 decoration-black/15">联系 IT</button>
+      </div>
     </div>
 
     <!-- Empty state -->
-    <div v-else-if="!sortedItems.length" class="flex flex-col items-center justify-center py-20">
-      <span class="material-icons-round text-6xl mb-4 text-[#dadce0]" aria-hidden="true">folder_open</span>
-      <p class="text-base text-[#5f6368]">此文件夹为空</p>
-      <p class="text-sm mt-1 text-[#80868b]">拖拽文件到此处上传，或点击「+ 新建」按钮</p>
+    <div v-else-if="!sortedItems.length" class="cd-panel mx-auto mt-10 flex max-w-md flex-col items-center justify-center px-8 py-16 text-center">
+      <span class="material-icons-round text-6xl mb-4 text-[#9dbcf8]" aria-hidden="true">cloud_queue</span>
+      <p class="text-base font-semibold text-[#344054]">此文件夹为空</p>
+      <p class="text-sm mt-2 text-[#7b8496]">拖拽文件到此处上传，或点击「新建」按钮</p>
     </div>
 
     <!-- Grid View -->
-    <div v-else-if="viewMode === 'grid'" class="file-grid gap-3 md:gap-4 pb-6">
-      <FileCard
-        v-for="(item, index) in sortedItems"
-        :key="item.path"
-        :item="item"
-        :selected="isSelected(item)"
-        @click="(e) => handleItemClick(e, item, index)"
-        @more="(e) => handleMoreClick(e, item)"
-      />
+    <div v-else-if="viewMode === 'grid'" class="space-y-7 pb-6">
+      <section v-if="folderItems.length">
+        <div class="mb-3 flex items-center gap-2">
+          <span class="text-[13px] font-semibold text-[#1f2937]">文件夹</span>
+          <span class="text-xs text-[#9aa3af]">{{ folderItems.length }}</span>
+        </div>
+        <div class="file-grid gap-5 md:gap-6">
+          <FileCard
+            v-for="item in folderItems"
+            :key="item.path"
+            :item="item"
+            :selected="isSelected(item)"
+            @click="(e) => handleItemClick(e, item, sortedItems.findIndex(i => i.path === item.path))"
+            @more="(e) => handleMoreClick(e, item)"
+          />
+        </div>
+      </section>
+
+      <section v-if="fileItems.length">
+        <div class="mb-3 flex items-center gap-2">
+          <span class="text-[13px] font-semibold text-[#1f2937]">文件</span>
+          <span class="text-xs text-[#9aa3af]">{{ fileItems.length }}</span>
+        </div>
+        <div class="file-grid gap-5 md:gap-6">
+          <FileCard
+            v-for="item in fileItems"
+            :key="item.path"
+            :item="item"
+            :selected="isSelected(item)"
+            @click="(e) => handleItemClick(e, item, sortedItems.findIndex(i => i.path === item.path))"
+            @more="(e) => handleMoreClick(e, item)"
+          />
+        </div>
+      </section>
     </div>
 
     <!-- List View -->
-    <div v-else class="bg-white rounded-xl overflow-hidden border border-[#e6e8eb] shadow-sm">
+    <div v-else class="cd-panel overflow-hidden rounded-3xl">
       <div class="file-list-row file-list-row--head px-4 py-3 text-xs font-medium text-[#5f6368] border-b border-[#ebedf0] select-none">
         <button
           type="button"
@@ -790,16 +863,16 @@ onBeforeUnmount(() => {
 <style scoped>
 .file-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 }
 @media (min-width: 640px) {
   .file-grid {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   }
 }
 @media (min-width: 1024px) {
   .file-grid {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   }
 }
 
@@ -846,7 +919,7 @@ onBeforeUnmount(() => {
   border-radius: 9999px;
   color: #5f6368;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 .view-toggle-btn:hover {
   color: #202124;
@@ -856,9 +929,9 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.4);
 }
 .view-toggle-btn.is-active {
-  background: #ffffff;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
   color: #1a73e8;
-  box-shadow: 0 1px 2px rgba(60, 64, 67, 0.15);
+  box-shadow: 0 6px 16px rgba(26, 115, 232, 0.12);
 }
 
 .quick-menu-item {
