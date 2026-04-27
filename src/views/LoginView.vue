@@ -27,10 +27,6 @@ async function handleLogin() {
   }
 }
 
-function handleSsoLogin() {
-  error.value = '企业 SSO 暂未接入，请先使用账号密码登录'
-}
-
 function handleResetPassword() {
   error.value = '请联系 IT 管理员重置密码'
 }
@@ -129,18 +125,6 @@ function handleResetPassword() {
 
         <button type="submit" :disabled="loading" class="primary-btn">
           {{ loading ? '登 录 中' : '登 录' }}
-        </button>
-
-        <div class="divider"><span>或</span></div>
-
-        <button type="button" class="sso-btn" @click="handleSsoLogin">
-          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-            <path d="M17.6 9.2c0-.6 0-1.2-.2-1.7H9v3.3h4.8c-.2 1.1-.8 2-1.8 2.6v2.2h2.9c1.7-1.5 2.7-3.8 2.7-6.4Z" fill="#4285F4"/>
-            <path d="M9 18c2.4 0 4.5-.8 6-2.2l-2.9-2.2c-.8.5-1.8.9-3.1.9-2.4 0-4.4-1.6-5.1-3.7H.9v2.3A9 9 0 0 0 9 18Z" fill="#34A853"/>
-            <path d="M3.9 10.7A5.4 5.4 0 0 1 3.6 9c0-.6.1-1.2.3-1.7V5H.9A9 9 0 0 0 0 9c0 1.5.3 2.8.9 4l3-2.3Z" fill="#FBBC05"/>
-            <path d="M9 3.6c1.3 0 2.5.5 3.5 1.4l2.6-2.6A9 9 0 0 0 .9 5l3 2.3C4.6 5.2 6.6 3.6 9 3.6Z" fill="#EA4335"/>
-          </svg>
-          <span>使用企业 SSO 登录</span>
         </button>
       </form>
     </main>
@@ -418,46 +402,6 @@ function handleResetPassword() {
 .primary-btn:disabled {
   cursor: not-allowed;
   opacity: 0.6;
-}
-
-.divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 24px 0;
-  color: var(--cd-text-muted);
-  font-size: 12px;
-}
-
-.divider::before,
-.divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--cd-line);
-}
-
-.sso-btn {
-  width: 100%;
-  height: 48px;
-  border-radius: 16px;
-  border: 1px solid var(--cd-line);
-  background: #fff;
-  color: var(--cd-text-primary);
-  font-size: 14px;
-  font-weight: 500;
-  font-family: inherit;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  cursor: pointer;
-  transition: background-color var(--cd-transition), border-color var(--cd-transition);
-}
-
-.sso-btn:hover {
-  background: #fafbfc;
-  border-color: #d8dde3;
 }
 
 .login-footer {
