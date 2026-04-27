@@ -45,6 +45,15 @@ async function loadBlobUrl() {
   } catch (e) { console.error('Blob load failed:', e) }
 }
 
+async function loadHtmlContent() {
+  htmlContent.value = ''
+  try {
+    const token = localStorage.getItem('auth_token') || ''
+    const res = await fetch(rawUrl.value, { headers: { 'X-Auth': token } })
+    if (res.ok) htmlContent.value = await res.text()
+  } catch { /* ignore */ }
+}
+
 const navigableFiles = computed(() => props.files.filter(f => !f.isDir))
 
 const currentIndex = computed(() =>
@@ -85,6 +94,16 @@ async function loadTextContent() {
   }
 }
 
+function loadCurrentPreview() {
+  if (['image', 'video', 'audio', 'pdf'].includes(previewType.value)) {
+    loadBlobUrl()
+  } else if (previewType.value === 'html') {
+    loadHtmlContent()
+  } else if (previewType.value === 'text') {
+    loadTextContent()
+  }
+}
+
 function handleWheel(e: WheelEvent) {
   if (previewType.value !== 'image') return
   e.preventDefault()
@@ -115,39 +134,17 @@ function handleDownload() {
 watch(() => props.file.path, () => {
   imageScale.value = 1
   if (blobUrl.value) { URL.revokeObjectURL(blobUrl.value); blobUrl.value = '' }
-  if (previewType.value === 'html') {
-    htmlContent.value = ''
-    const token = localStorage.getItem('auth_token') || ''
-    fetch(rawUrl.value, { headers: { 'X-Auth': token } })
-      .then(res => res.ok ? res.text() : '')
-      .then(text => { htmlContent.value = text })
-      .catch(() => {})
-  }
-  if (previewType.value === 'text') {
-    loadTextContent()
-  }
-  if (['image', 'video', 'audio', 'pdf'].includes(previewType.value)) {
-    loadBlobUrl()
-  }
+  loadCurrentPreview()
 }, { immediate: false })
 
 onMounted(() => {
   document.addEventListener('keydown', handleKeydown)
-  // Initial load for media
-  if (['image', 'video', 'audio', 'pdf'].includes(previewType.value)) loadBlobUrl()
-  if (previewType.value === 'html') {
-    const tk = localStorage.getItem('auth_token') || ''
-    fetch(rawUrl.value, { headers: { 'X-Auth': tk } })
-      .then(r => r.ok ? r.text() : '').then(t => { htmlContent.value = t }).catch(() => {})
-  }
-  if (previewType.value === 'text') loadTextContent()
-  if (previewType.value === 'text') {
-    loadTextContent()
-  }
+  loadCurrentPreview()
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', handleKeydown)
+  if (blobUrl.value) URL.revokeObjectURL(blobUrl.value)
 })
 </script>
 

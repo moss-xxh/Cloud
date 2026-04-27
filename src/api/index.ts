@@ -1,5 +1,10 @@
 import type { FileItem, ResourceResponse, UsageResponse } from '../types'
 
+// Trash filename layout: `<name><TRASH_SENTINEL><urlencoded original parent dir>`.
+// Wrapped in U+0001 control chars so it cannot collide with any practical filename.
+const TRASH_SENTINEL = '\u0001__FROM__\u0001'
+const LEGACY_TRASH_SENTINEL = '__FROM__'
+
 function getToken(): string {
   return localStorage.getItem('auth_token') || ''
 }
@@ -68,7 +73,7 @@ export async function moveResource(srcPath: string, destPath: string): Promise<v
 export async function moveToTrash(path: string, name: string): Promise<void> {
   const parentDir = path.substring(0, path.lastIndexOf('/'))
   const encodedOrigPath = encodeURIComponent(parentDir || '/')
-  const trashName = `${name}__FROM__${encodedOrigPath}`
+  const trashName = `${name}${TRASH_SENTINEL}${encodedOrigPath}`
   const destPath = `/.trash/${trashName}`
   // Ensure .trash folder exists
   try {
@@ -80,12 +85,26 @@ export async function moveToTrash(path: string, name: string): Promise<void> {
 }
 
 export function parseTrashName(trashName: string): { originalName: string; originalDir: string } {
-  const fromIndex = trashName.indexOf('__FROM__')
-  if (fromIndex === -1) {
+  // Prefer new sentinel; fall back to legacy for items trashed before the sentinel change.
+  // Use lastIndexOf so that even if the sentinel string somehow appears in originalName,
+  // we still split on the last occurrence (which is what moveToTrash appended).
+  let idx = trashName.lastIndexOf(TRASH_SENTINEL)
+  let sentinelLen = TRASH_SENTINEL.length
+  if (idx === -1) {
+    idx = trashName.lastIndexOf(LEGACY_TRASH_SENTINEL)
+    sentinelLen = LEGACY_TRASH_SENTINEL.length
+  }
+  if (idx === -1) {
     return { originalName: trashName, originalDir: '/' }
   }
-  const originalName = trashName.substring(0, fromIndex)
-  const originalDir = decodeURIComponent(trashName.substring(fromIndex + 8))
+  const originalName = trashName.substring(0, idx)
+  let originalDir = '/'
+  try {
+    originalDir = decodeURIComponent(trashName.substring(idx + sentinelLen)) || '/'
+  } catch {
+    // Malformed encoding — fall back to root rather than failing the whole list.
+    originalDir = '/'
+  }
   return { originalName, originalDir }
 }
 
@@ -161,15 +180,25 @@ export async function searchFiles(path: string, query: string): Promise<{ items:
     headers: authHeaders()
   })
   if (!res.ok) throw new Error(`Search failed: ${res.statusText}`)
-  // FileBrowser search returns NDJSON (one JSON per line), not a JSON array
+  // FileBrowser search returns NDJSON (one JSON per line), not a JSON array.
+  // A single malformed line must not abort the entire result set.
   const text = await res.text()
-  const items: FileItem[] = text.trim().split('\n').filter(Boolean).map(line => {
-    const obj = JSON.parse(line)
-    const fullPath = obj.path
+  const items: FileItem[] = []
+  for (const line of text.split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed) continue
+    let obj: any
+    try {
+      obj = JSON.parse(trimmed)
+    } catch {
+      continue
+    }
+    const fullPath = typeof obj.path === 'string' ? obj.path : ''
+    if (!fullPath) continue
     const parts = fullPath.split('/')
     const name = parts[parts.length - 1] || parts[parts.length - 2] || fullPath
     const extIdx = name.lastIndexOf('.')
-    return {
+    items.push({
       path: '/' + fullPath,
       name,
       size: obj.size || 0,
@@ -179,8 +208,8 @@ export async function searchFiles(path: string, query: string): Promise<{ items:
       isDir: obj.dir || false,
       isSymlink: false,
       type: obj.type || (obj.dir ? 'directory' : 'file')
-    }
-  })
+    })
+  }
   return { items }
 }
 
