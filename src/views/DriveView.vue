@@ -595,44 +595,68 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <!-- Loading skeleton -->
-    <div v-if="loading" class="space-y-7 pb-6">
+    <!-- Loading skeleton (v3: cd-skel pulses on glass-aware background) -->
+    <div v-if="loading" class="space-y-9 pb-6">
       <section>
         <div class="mb-3 flex items-center gap-2">
-          <div class="h-4 w-14 animate-pulse rounded bg-[#e7ebf0]"></div>
-          <div class="h-3 w-5 animate-pulse rounded bg-[#eef0f3]"></div>
+          <div class="cd-skel h-3.5 w-12"></div>
+          <div class="cd-skel h-3 w-5"></div>
         </div>
         <div class="file-grid gap-5 md:gap-6">
-          <div v-for="n in 6" :key="`folder-skeleton-${n}`" class="h-[84px] animate-pulse rounded-2xl border border-[#eef0f3] bg-white"></div>
+          <div v-for="n in 6" :key="`folder-skel-${n}`" class="cd-file-card flex h-[84px] items-center gap-3 px-4">
+            <div class="cd-skel h-9 w-9 shrink-0 rounded-lg"></div>
+            <div class="flex flex-1 flex-col gap-2">
+              <div class="cd-skel h-2.5 w-3/5"></div>
+              <div class="cd-skel h-2 w-1/3"></div>
+            </div>
+          </div>
         </div>
       </section>
       <section>
         <div class="mb-3 flex items-center gap-2">
-          <div class="h-4 w-10 animate-pulse rounded bg-[#e7ebf0]"></div>
-          <div class="h-3 w-5 animate-pulse rounded bg-[#eef0f3]"></div>
+          <div class="cd-skel h-3.5 w-10"></div>
+          <div class="cd-skel h-3 w-5"></div>
         </div>
         <div class="file-grid gap-5 md:gap-6">
-          <div v-for="n in 8" :key="`file-skeleton-${n}`" class="h-[208px] animate-pulse rounded-2xl border border-[#eef0f3] bg-white"></div>
+          <div v-for="n in 8" :key="`file-skel-${n}`" class="cd-file-card flex h-[208px] flex-col overflow-hidden">
+            <div class="flex flex-1 items-center justify-center bg-[#fafbfc]">
+              <div class="cd-skel h-10 w-10"></div>
+            </div>
+            <div class="flex flex-col gap-2 border-t border-[var(--cd-line-soft)] px-3 py-3">
+              <div class="cd-skel h-2.5 w-4/5"></div>
+              <div class="cd-skel h-2 w-1/2"></div>
+            </div>
+          </div>
         </div>
       </section>
     </div>
 
-    <!-- Error state -->
-    <div v-else-if="loadError" class="cd-panel mx-auto mt-10 flex max-w-md flex-col items-center justify-center px-8 py-16 text-center">
-      <span class="material-icons-round text-6xl mb-4 text-[#ea4335]" aria-hidden="true">cloud_off</span>
-      <p class="text-base font-semibold text-[#344054]">网络错误</p>
-      <p class="text-sm mt-2 text-[#7b8496]">{{ loadError }}</p>
-      <div class="mt-5 flex items-center gap-3">
-        <button type="button" class="rounded-xl bg-[#1a73e8] px-4 py-2 text-sm font-semibold text-white" @click="loadFiles">重试</button>
-        <button type="button" class="text-sm text-[#667085] underline underline-offset-4 decoration-black/15">联系 IT</button>
+    <!-- Error state (v3: centered illustration + primary/secondary actions) -->
+    <div v-else-if="loadError" class="cd-state-center">
+      <div class="cd-state-card">
+        <svg class="cd-state-illustration" width="96" height="96" viewBox="0 0 84 84" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="42" cy="42" r="32" />
+          <path d="M30 30l24 24M54 30 30 54" />
+        </svg>
+        <h3 class="cd-state-title">加载失败</h3>
+        <p class="cd-state-desc">{{ loadError || '网络连接异常，无法加载文件列表。请检查网络后重试。' }}</p>
+        <div class="flex items-center justify-center gap-2">
+          <button type="button" class="cd-primary-button h-10 px-5 text-sm" @click="loadFiles">重新加载</button>
+          <button type="button" class="cd-secondary-button h-10 px-5 text-sm">联系 IT</button>
+        </div>
       </div>
     </div>
 
-    <!-- Empty state -->
-    <div v-else-if="!sortedItems.length" class="cd-panel mx-auto mt-10 flex max-w-md flex-col items-center justify-center px-8 py-16 text-center">
-      <span class="material-icons-round text-6xl mb-4 text-[#9dbcf8]" aria-hidden="true">cloud_queue</span>
-      <p class="text-base font-semibold text-[#344054]">此文件夹为空</p>
-      <p class="text-sm mt-2 text-[#7b8496]">拖拽文件到此处上传，或点击「新建」按钮</p>
+    <!-- Empty state (v3: line-only cloud + primary CTA) -->
+    <div v-else-if="!sortedItems.length" class="cd-state-center">
+      <div class="cd-state-card">
+        <svg class="cd-state-illustration" width="120" height="84" viewBox="0 0 120 84" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" aria-hidden="true">
+          <path d="M30 64a18 18 0 1 1 3.6-35.7A22 22 0 0 1 79 36a14 14 0 0 1 0 28H30Z" />
+          <path d="M48 50h24M60 42v16" stroke-width="1.5" stroke-linecap="round" />
+        </svg>
+        <h3 class="cd-state-title">还没有任何文件</h3>
+        <p class="cd-state-desc">将文件拖入此处，或点击「新建」上传第一个文件。</p>
+      </div>
     </div>
 
     <!-- Grid View -->
@@ -735,7 +759,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <!-- Quick Actions Menu (⋮ button) -->
+    <!-- Quick Actions Menu (⋮ button) — v3 cd-floating-menu -->
     <Teleport to="body">
       <div
         v-if="quickMenu"
@@ -743,7 +767,7 @@ onBeforeUnmount(() => {
         @click="quickMenu = null"
       >
         <div
-          class="context-menu fixed bg-white rounded-xl shadow-xl py-1.5 z-[100] w-52 border border-[#dadce0]"
+          class="cd-floating-menu fixed z-[100] w-52 p-1.5"
           :style="quickMenuStyle"
           role="menu"
           @click.stop
@@ -751,58 +775,58 @@ onBeforeUnmount(() => {
           <button
             v-if="!quickMenu.item.isDir"
             type="button"
-            class="quick-menu-item"
+            class="cd-floating-item w-full"
             role="menuitem"
             @click="handleQuickDownload()"
           >
-            <span class="material-icons-round text-[18px] text-[#5f6368]" aria-hidden="true">download</span>
+            <span class="material-icons-round text-[18px] text-[var(--cd-text-secondary)]" aria-hidden="true">download</span>
             下载
           </button>
           <button
             type="button"
-            class="quick-menu-item"
+            class="cd-floating-item w-full"
             role="menuitem"
             @click="handleQuickRename()"
           >
-            <span class="material-icons-round text-[18px] text-[#5f6368]" aria-hidden="true">edit</span>
+            <span class="material-icons-round text-[18px] text-[var(--cd-text-secondary)]" aria-hidden="true">edit</span>
             重命名
           </button>
           <button
             type="button"
-            class="quick-menu-item"
+            class="cd-floating-item w-full"
             role="menuitem"
             @click="handleQuickShare()"
           >
-            <span class="material-icons-round text-[18px] text-[#5f6368]" aria-hidden="true">link</span>
+            <span class="material-icons-round text-[18px] text-[var(--cd-text-secondary)]" aria-hidden="true">link</span>
             分享链接
           </button>
           <button
             type="button"
-            class="quick-menu-item"
+            class="cd-floating-item w-full"
             role="menuitem"
             @click="handleQuickMoveTo()"
           >
-            <span class="material-icons-round text-[18px] text-[#5f6368]" aria-hidden="true">drive_file_move</span>
+            <span class="material-icons-round text-[18px] text-[var(--cd-text-secondary)]" aria-hidden="true">drive_file_move</span>
             移动到
           </button>
-          <div class="h-px bg-[#ebedf0] my-1"></div>
+          <div class="my-1 h-px bg-[var(--cd-line-soft)]"></div>
           <button
             type="button"
-            class="quick-menu-item quick-menu-item--danger"
+            class="cd-floating-item is-danger w-full"
             role="menuitem"
             @click="handleQuickDelete()"
           >
             <span class="material-icons-round text-[18px]" aria-hidden="true">delete</span>
             删除
           </button>
-          <div class="h-px bg-[#ebedf0] my-1"></div>
+          <div class="my-1 h-px bg-[var(--cd-line-soft)]"></div>
           <button
             type="button"
-            class="quick-menu-item"
+            class="cd-floating-item w-full"
             role="menuitem"
             @click="handleQuickDetails()"
           >
-            <span class="material-icons-round text-[18px] text-[#5f6368]" aria-hidden="true">info</span>
+            <span class="material-icons-round text-[18px] text-[var(--cd-text-secondary)]" aria-hidden="true">info</span>
             详情
           </button>
         </div>

@@ -70,7 +70,7 @@ onMounted(() => {
 <template>
   <div class="p-6 h-full">
     <div class="flex items-center justify-between mb-4">
-      <h2 class="text-base font-medium text-[#202124]">回收站</h2>
+      <h2 class="text-base font-medium text-[var(--cd-text-primary)]">回收站</h2>
       <button
         v-if="trashItems.length > 0"
         @click="handleEmptyTrash"
@@ -86,13 +86,13 @@ onMounted(() => {
     </div>
 
     <div v-else-if="!trashItems.length" class="flex flex-col items-center justify-center py-20">
-      <span class="material-icons-round text-6xl mb-4 text-[#dadce0]">delete</span>
-      <p class="text-base text-[#5f6368]">回收站为空</p>
-      <p class="text-sm mt-1 text-[#80868b]">删除的文件将显示在这里</p>
+      <span class="material-icons-round text-6xl mb-4 text-[var(--cd-text-muted)]">delete</span>
+      <p class="text-base text-[var(--cd-text-secondary)]">回收站为空</p>
+      <p class="text-sm mt-1 text-[var(--cd-text-muted)]">删除的文件将显示在这里</p>
     </div>
 
-    <div v-else class="bg-white rounded-xl overflow-hidden border border-[#e0e0e0]">
-      <div class="flex items-center px-4 py-3 text-xs font-medium text-[#5f6368] border-b border-[#e0e0e0]">
+    <div v-else class="cd-panel overflow-hidden">
+      <div class="flex items-center px-4 py-3 text-xs font-medium text-[var(--cd-text-secondary)] border-b border-[var(--cd-line)]">
         <div class="flex-1">名称</div>
         <div class="w-48 hidden md:block">原始位置</div>
         <div class="w-40 hidden md:block">删除时间</div>
@@ -101,23 +101,23 @@ onMounted(() => {
       <div
         v-for="ti in trashItems"
         :key="ti.item.path"
-        class="flex items-center px-4 py-2.5 border-b border-[#f1f3f4] hover:bg-[#f8f9fa] transition-colors"
+        class="flex items-center px-4 py-2.5 border-b border-[var(--cd-line-soft)] hover:bg-white/60 transition-colors"
       >
         <div class="flex items-center gap-3 flex-1 min-w-0">
           <span
             class="material-icons-round text-xl shrink-0"
-            :class="ti.item.isDir ? 'text-[#5f6368]' : 'text-[#1a73e8]'"
+            :class="ti.item.isDir ? 'text-[var(--cd-text-secondary)]' : 'text-[var(--cd-primary)]'"
           >
             {{ getFileIcon(ti.item.extension, ti.item.isDir) }}
           </span>
-          <span class="text-sm truncate text-[#202124]">{{ ti.originalName }}</span>
+          <span class="text-sm truncate text-[var(--cd-text-primary)]">{{ ti.originalName }}</span>
         </div>
-        <div class="w-48 text-xs text-[#5f6368] truncate hidden md:block">{{ ti.originalDir }}</div>
-        <div class="w-40 text-xs text-[#5f6368] hidden md:block">{{ formatDate(ti.item.modified) }}</div>
+        <div class="w-48 text-xs text-[var(--cd-text-secondary)] truncate hidden md:block">{{ ti.originalDir }}</div>
+        <div class="w-40 text-xs text-[var(--cd-text-secondary)] hidden md:block">{{ formatDate(ti.item.modified) }}</div>
         <div class="w-48 flex items-center justify-end gap-2">
           <button
             @click="handleRestore(ti)"
-            class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors text-[#1a73e8] hover:bg-[#e8f0fe]"
+            class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors text-[var(--cd-primary)] hover:bg-[var(--cd-primary-soft)]"
             title="还原"
           >
             <span class="material-icons-round text-base">restore</span>

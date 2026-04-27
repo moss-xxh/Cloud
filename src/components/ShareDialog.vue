@@ -84,66 +84,72 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="fixed inset-0 z-[200] flex items-center justify-center bg-black/40" @click.self="emit('close')">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-base font-medium text-[#202124]">分享「{{ item.name }}」</h3>
+  <div class="cd-modal-backdrop" @click.self="emit('close')">
+    <div class="cd-modal-shell share-dialog">
+      <header class="flex items-center justify-between px-7 py-5 border-b border-[var(--cd-line-soft)]">
+        <h3 class="text-base font-semibold text-[var(--cd-text-primary)] truncate pr-3">分享「{{ item.name }}」</h3>
         <button
           @click="emit('close')"
-          class="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer text-[#5f6368] hover:bg-[#e8f0fe] transition-colors"
+          class="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer text-[var(--cd-text-secondary)] hover:bg-[var(--cd-primary-soft)] transition-colors shrink-0"
         >
           <span class="material-icons-round text-lg">close</span>
         </button>
+      </header>
+
+      <div class="px-7 py-6">
+        <!-- Loading -->
+        <div v-if="loading" class="cd-state-loading">
+          <div class="animate-spin rounded-full h-9 w-9 border-2 border-[var(--cd-primary)] border-t-transparent"></div>
+          <p class="mt-4 text-sm">正在生成分享链接…</p>
+        </div>
+
+        <!-- Failed -->
+        <div v-else-if="failed" class="cd-state-error">
+          <span class="material-icons-round text-4xl mb-3">error_outline</span>
+          <p class="text-sm">{{ errorMsg }}</p>
+          <button
+            @click="createOrGetShare"
+            class="cd-secondary-button mt-4 px-5 py-2 text-sm"
+          >
+            重试
+          </button>
+        </div>
+
+        <!-- Success -->
+        <div v-else class="space-y-5">
+          <div class="flex items-center gap-2 text-sm text-[var(--cd-text-primary)]">
+            <span class="material-icons-round text-xl text-[#34a853]">link</span>
+            分享链接已生成
+          </div>
+          <div class="flex items-center gap-3">
+            <input
+              type="text"
+              :value="shareLink"
+              readonly
+              class="cd-input flex-1 px-4 py-2.5 text-sm"
+            />
+            <button
+              @click="copyLink"
+              class="cd-primary-button shrink-0 px-5 py-2.5 text-sm"
+              :class="copied ? '!bg-[#34a853] hover:!bg-[#2c8d44]' : ''"
+            >
+              {{ copied ? '已复制' : '复制链接' }}
+            </button>
+          </div>
+          <p class="text-xs text-[var(--cd-text-muted)] leading-relaxed">
+            {{ item.isDir ? '此链接可浏览文件夹内容（JSON 格式），文件夹内文件需单独分享。' : '任何拥有此链接的人都可直接下载该文件。' }}
+          </p>
+        </div>
       </div>
 
-      <!-- Loading -->
-      <div v-if="loading" class="flex items-center justify-center py-8">
-        <div class="animate-spin rounded-full h-8 w-8 border-2 border-[#1a73e8] border-t-transparent"></div>
-      </div>
-
-      <!-- Failed -->
-      <div v-else-if="failed" class="text-center py-6">
-        <span class="material-icons-round text-4xl mb-3 text-[#ea4335]">error_outline</span>
-        <p class="text-sm text-[#5f6368]">{{ errorMsg }}</p>
+      <footer v-if="!loading && !failed" class="flex justify-end px-7 py-4 border-t border-[var(--cd-line-soft)]">
         <button
-          @click="createOrGetShare"
-          class="mt-3 px-4 py-2 rounded-lg text-sm font-medium text-[#1a73e8] hover:bg-[#e8f0fe] cursor-pointer transition-colors"
+          @click="removeShare"
+          class="px-4 py-2 rounded-2xl text-sm font-medium text-[#d93025] hover:bg-[rgba(217,48,37,0.08)] cursor-pointer transition-colors"
         >
-          重试
+          取消分享
         </button>
-      </div>
-
-      <!-- Success -->
-      <div v-else class="space-y-4">
-        <div class="flex items-center gap-2">
-          <span class="material-icons-round text-xl text-[#34a853]">link</span>
-          <span class="text-sm text-[#202124]">分享链接已创建</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <input
-            type="text"
-            :value="shareLink"
-            readonly
-            class="flex-1 px-3 py-2 border border-[#dadce0] rounded-lg text-sm text-[#202124] bg-[#f8f9fa] outline-none"
-          />
-          <button
-            @click="copyLink"
-            class="px-4 py-2 rounded-lg text-sm font-medium text-white cursor-pointer transition-colors shrink-0"
-            :class="copied ? 'bg-[#34a853]' : 'bg-[#1a73e8] hover:bg-[#1557b0]'"
-          >
-            {{ copied ? '已复制 ✓' : '复制链接' }}
-          </button>
-        </div>
-        <p class="text-xs text-[#80868b]">{{ item.isDir ? '此链接可浏览文件夹内容（JSON格式），文件夹内文件需单独分享' : '任何拥有此链接的人都可以直接下载该文件' }}</p>
-        <div class="pt-2 border-t border-[#f1f3f4] flex justify-end">
-          <button
-            @click="removeShare"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium text-[#e53935] hover:bg-[#fbe9e7] cursor-pointer transition-colors"
-          >
-            取消分享
-          </button>
-        </div>
-      </div>
+      </footer>
     </div>
   </div>
 </template>

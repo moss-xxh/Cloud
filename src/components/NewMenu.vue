@@ -60,7 +60,7 @@ async function handleFolderSelected(e: Event) {
 
 async function doUpload(files: FileList, isFolder: boolean) {
   const currentPath = getCurrentPath()
-  
+
   // For folder upload: collect unique directories and create them first
   if (isFolder) {
     const dirs = new Set<string>()
@@ -122,44 +122,21 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div
-    class="new-menu-container absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg py-1 z-50 w-52 border border-[#dadce0]"
-  >
-    <button
-      @click="handleNewFolder"
-      class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left cursor-pointer transition-colors text-[#202124] hover:bg-[#e8f0fe]"
-    >
-      <span class="material-icons-round text-xl text-[#5f6368]">create_new_folder</span>
+  <div class="new-menu-container cd-floating-menu absolute left-0 top-full mt-2 z-50 w-56">
+    <button @click="handleNewFolder" class="cd-floating-item">
+      <span class="material-icons-round text-xl text-[var(--cd-text-secondary)]">create_new_folder</span>
       新建文件夹
     </button>
-    <div class="my-1 border-t border-[#dadce0]"></div>
-    <button
-      @click="handleUploadFileClick"
-      class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left cursor-pointer transition-colors text-[#202124] hover:bg-[#e8f0fe]"
-    >
-      <span class="material-icons-round text-xl text-[#5f6368]">upload_file</span>
+    <div class="cd-floating-divider"></div>
+    <button @click="handleUploadFileClick" class="cd-floating-item">
+      <span class="material-icons-round text-xl text-[var(--cd-text-secondary)]">upload_file</span>
       上传文件
     </button>
-    <button
-      @click="handleUploadFolderClick"
-      class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left cursor-pointer transition-colors text-[#202124] hover:bg-[#e8f0fe]"
-    >
-      <span class="material-icons-round text-xl text-[#5f6368]">drive_folder_upload</span>
+    <button @click="handleUploadFolderClick" class="cd-floating-item">
+      <span class="material-icons-round text-xl text-[var(--cd-text-secondary)]">drive_folder_upload</span>
       上传文件夹
     </button>
-    <input
-      ref="fileInput"
-      type="file"
-      multiple
-      class="hidden"
-      @change="handleFileSelected"
-    />
-    <input
-      ref="folderInput"
-      type="file"
-      webkitdirectory
-      class="hidden"
-      @change="handleFolderSelected"
-    />
+    <input ref="fileInput" type="file" multiple class="hidden" @change="handleFileSelected" />
+    <input ref="folderInput" type="file" webkitdirectory class="hidden" @change="handleFolderSelected" />
   </div>
 </template>

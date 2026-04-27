@@ -69,32 +69,27 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div v-if="uploads.length" class="fixed bottom-4 right-4 z-[200] space-y-2 w-80">
-    <div
-      v-for="item in uploads"
-      :key="item.name"
-      class="bg-white rounded-lg shadow-lg p-3"
-      style="border: 1px solid #dadce0"
-    >
-      <div class="flex items-center gap-2 mb-2">
+  <div v-if="uploads.length" class="fixed bottom-6 right-6 z-[200] space-y-3 w-80">
+    <div v-for="item in uploads" :key="item.name" class="cd-toast">
+      <div class="flex items-center gap-3 mb-2">
         <span
           class="material-icons-round text-lg"
-          :style="{ color: item.status === 'error' ? '#ea4335' : item.status === 'done' ? '#34a853' : '#1a73e8' }"
+          :style="{ color: item.status === 'error' ? '#ea4335' : item.status === 'done' ? '#34a853' : 'var(--cd-primary)' }"
         >
           {{ item.status === 'error' ? 'error' : item.status === 'done' ? 'check_circle' : 'upload_file' }}
         </span>
-        <span class="text-sm flex-1 truncate" style="color: #202124">{{ item.name }}</span>
-        <span class="text-xs" style="color: #5f6368">
+        <span class="text-sm flex-1 truncate text-[var(--cd-text-primary)]">{{ item.name }}</span>
+        <span class="text-xs text-[var(--cd-text-secondary)]">
           {{ item.status === 'done' ? '完成' : item.status === 'error' ? '失败' : item.percent + '%' }}
         </span>
       </div>
-      <div v-if="item.status === 'uploading'" class="w-full h-1 rounded-full" style="background: #e0e0e0">
+      <div v-if="item.status === 'uploading'" class="w-full h-1 rounded-full bg-[rgba(60,80,140,0.10)] overflow-hidden">
         <div
           class="h-full rounded-full transition-all"
-          :style="{ width: item.percent + '%', background: '#1a73e8' }"
+          :style="{ width: item.percent + '%', background: 'var(--cd-primary)' }"
         ></div>
       </div>
-      <p v-if="item.status === 'error'" class="text-xs mt-1" style="color: #ea4335">{{ item.error }}</p>
+      <p v-if="item.status === 'error'" class="text-xs mt-1 text-[#ea4335]">{{ item.error }}</p>
     </div>
   </div>
 </template>

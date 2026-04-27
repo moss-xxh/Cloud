@@ -24,8 +24,8 @@ const showShareDialog = ref(false)
 const menuStyle = computed(() => {
   const style: Record<string, string> = {}
   // Adjust position to keep menu on screen
-  const menuWidth = 208
-  const menuHeight = 280
+  const menuWidth = 224
+  const menuHeight = 320
   const x = props.x + menuWidth > window.innerWidth ? window.innerWidth - menuWidth - 8 : props.x
   const y = props.y + menuHeight > window.innerHeight ? window.innerHeight - menuHeight - 8 : props.y
   style.left = x + 'px'
@@ -119,113 +119,96 @@ onBeforeUnmount(() => {
   <!-- Context Menu -->
   <div
     v-if="!showDetails && !showMoveModal && !showShareDialog"
-    class="context-menu fixed bg-white rounded-lg shadow-xl py-1 z-[100] w-52 border border-[#dadce0]"
+    class="context-menu cd-floating-menu fixed z-[100] w-56"
     :style="menuStyle"
   >
-    <button
-      v-if="!item.isDir"
-      @click="handleDownload"
-      class="w-full flex items-center gap-3 px-4 py-2 text-sm text-left cursor-pointer transition-colors text-[#202124] hover:bg-[#e8f0fe]"
-    >
-      <span class="material-icons-round text-lg text-[#5f6368]">download</span>
+    <button v-if="!item.isDir" @click="handleDownload" class="cd-floating-item">
+      <span class="material-icons-round text-lg text-[var(--cd-text-secondary)]">download</span>
       下载
     </button>
-    <button
-      @click="handleRename"
-      class="w-full flex items-center gap-3 px-4 py-2 text-sm text-left cursor-pointer transition-colors text-[#202124] hover:bg-[#e8f0fe]"
-    >
-      <span class="material-icons-round text-lg text-[#5f6368]">edit</span>
+    <button @click="handleRename" class="cd-floating-item">
+      <span class="material-icons-round text-lg text-[var(--cd-text-secondary)]">edit</span>
       重命名
     </button>
-    <button
-      @click="handleMoveTo"
-      class="w-full flex items-center gap-3 px-4 py-2 text-sm text-left cursor-pointer transition-colors text-[#202124] hover:bg-[#e8f0fe]"
-    >
-      <span class="material-icons-round text-lg text-[#5f6368]">drive_file_move</span>
+    <button @click="handleMoveTo" class="cd-floating-item">
+      <span class="material-icons-round text-lg text-[var(--cd-text-secondary)]">drive_file_move</span>
       移动到
     </button>
-    <button
-      @click="handleShare"
-      class="w-full flex items-center gap-3 px-4 py-2 text-sm text-left cursor-pointer transition-colors text-[#202124] hover:bg-[#e8f0fe]"
-    >
-      <span class="material-icons-round text-lg text-[#5f6368]">share</span>
+    <button @click="handleShare" class="cd-floating-item">
+      <span class="material-icons-round text-lg text-[var(--cd-text-secondary)]">share</span>
       分享链接
     </button>
-    <button
-      @click="handleDelete"
-      class="w-full flex items-center gap-3 px-4 py-2 text-sm text-left cursor-pointer transition-colors text-[#202124] hover:bg-[#e8f0fe]"
-    >
-      <span class="material-icons-round text-lg text-[#5f6368]">delete</span>
-      删除
-    </button>
-    <div class="my-1 border-t border-[#e0e0e0]"></div>
-    <button
-      @click="handleDetails"
-      class="w-full flex items-center gap-3 px-4 py-2 text-sm text-left cursor-pointer transition-colors text-[#202124] hover:bg-[#e8f0fe]"
-    >
-      <span class="material-icons-round text-lg text-[#5f6368]">info</span>
+    <div class="cd-floating-divider"></div>
+    <button @click="handleDetails" class="cd-floating-item">
+      <span class="material-icons-round text-lg text-[var(--cd-text-secondary)]">info</span>
       详情
+    </button>
+    <div class="cd-floating-divider"></div>
+    <button @click="handleDelete" class="cd-floating-item is-danger">
+      <span class="material-icons-round text-lg">delete</span>
+      删除
     </button>
   </div>
 
   <!-- Details Drawer -->
   <Teleport to="body">
     <Transition name="slide">
-      <div
+      <aside
         v-if="showDetails"
-        class="details-drawer fixed right-0 top-16 bottom-0 w-80 bg-white shadow-xl z-[100] flex flex-col border-l border-[#dadce0]"
+        class="details-drawer cd-drawer-shell z-[100]"
       >
-        <div class="flex items-center justify-between px-6 py-4 border-b border-[#dadce0]">
-          <h3 class="text-base font-medium text-[#202124]">详情</h3>
+        <header class="flex items-center justify-between px-6 py-5 border-b border-[var(--cd-line-soft)]">
+          <h3 class="text-base font-semibold text-[var(--cd-text-primary)]">详情</h3>
           <button
             @click="closeDetails"
-            class="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-colors text-[#5f6368] hover:bg-[#e8f0fe]"
+            class="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition-colors text-[var(--cd-text-secondary)] hover:bg-[var(--cd-primary-soft)]"
           >
             <span class="material-icons-round">close</span>
           </button>
-        </div>
+        </header>
         <div class="flex-1 overflow-auto p-6">
           <!-- Thumbnail -->
-          <div class="text-center mb-6">
+          <div class="text-center mb-6 p-6 rounded-2xl bg-white/60 border border-[var(--cd-border-glass)]">
             <img
               v-if="!item.isDir && isImageFile(item.extension)"
               :src="detailBlobUrl"
               :alt="item.name"
-              class="max-w-full max-h-40 rounded-lg mx-auto object-contain"
+              class="max-w-full max-h-40 rounded-xl mx-auto object-contain"
             />
             <span
               v-else
-              class="material-icons-round text-6xl"
-              :class="item.isDir ? 'text-[#5f6368]' : 'text-[#1a73e8]'"
+              class="material-icons-round"
+              :class="item.isDir ? 'text-[var(--cd-text-secondary)]' : 'text-[var(--cd-primary)]'"
+              style="font-size: 56px"
             >
               {{ getFileIcon(item.extension, item.isDir) }}
             </span>
-            <p class="mt-3 text-sm font-medium text-[#202124]">{{ item.name }}</p>
+            <p class="mt-3 text-sm font-medium text-[var(--cd-text-primary)] break-all">{{ item.name }}</p>
           </div>
-          <div class="space-y-4">
+          <dl class="space-y-5">
             <div>
-              <p class="text-xs mb-1 text-[#5f6368]">类型</p>
-              <p class="text-sm text-[#202124]">{{ item.isDir ? 'Folder' : (item.extension || 'File') }}</p>
+              <dt class="text-xs mb-1 text-[var(--cd-text-secondary)]">类型</dt>
+              <dd class="text-sm text-[var(--cd-text-primary)]">{{ item.isDir ? '文件夹' : (item.extension || '文件') }}</dd>
             </div>
             <div v-if="!item.isDir">
-              <p class="text-xs mb-1 text-[#5f6368]">大小</p>
-              <p class="text-sm text-[#202124]">{{ formatSize(item.size) }}</p>
+              <dt class="text-xs mb-1 text-[var(--cd-text-secondary)]">大小</dt>
+              <dd class="text-sm text-[var(--cd-text-primary)]">{{ formatSize(item.size) }}</dd>
             </div>
             <div>
-              <p class="text-xs mb-1 text-[#5f6368]">修改时间</p>
-              <p class="text-sm text-[#202124]">{{ formatDate(item.modified) }}</p>
+              <dt class="text-xs mb-1 text-[var(--cd-text-secondary)]">修改时间</dt>
+              <dd class="text-sm text-[var(--cd-text-primary)]">{{ formatDate(item.modified) }}</dd>
             </div>
             <div>
-              <p class="text-xs mb-1 text-[#5f6368]">位置</p>
-              <p class="text-sm text-[#202124] break-all">{{ item.path }}</p>
+              <dt class="text-xs mb-1 text-[var(--cd-text-secondary)]">位置</dt>
+              <dd class="text-sm text-[var(--cd-text-primary)] break-all">{{ item.path }}</dd>
             </div>
             <div>
-              <p class="text-xs mb-1 text-[#5f6368]">Permissions</p>
-              <p class="text-sm text-[#202124] font-mono">{{ item.mode ? item.mode.toString(8) : '—' }}</p>
+              <dt class="text-xs mb-1 text-[var(--cd-text-secondary)]">权限</dt>
+              <dd class="text-sm text-[var(--cd-text-primary)] font-mono">{{ item.mode ? item.mode.toString(8) : '—' }}</dd>
             </div>
-          </div>
+          </dl>
         </div>
-      </div>
+      </aside>
     </Transition>
   </Teleport>
 
@@ -252,7 +235,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .slide-enter-active,
 .slide-leave-active {
-  transition: transform 0.2s ease;
+  transition: transform 0.22s ease;
 }
 .slide-enter-from,
 .slide-leave-to {

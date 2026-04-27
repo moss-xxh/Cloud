@@ -98,39 +98,39 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="fixed inset-0 z-[200] flex items-center justify-center bg-black/40" @click.self="emit('close')">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 flex flex-col max-h-[70vh]">
+  <div class="cd-modal-backdrop" @click.self="emit('close')">
+    <div class="cd-modal-shell move-modal" style="max-height: min(70vh, 640px)">
       <!-- Header -->
-      <div class="flex items-center justify-between px-6 py-4 border-b border-[#dadce0]">
-        <h3 class="text-base font-medium text-[#202124]">移动到</h3>
+      <header class="flex items-center justify-between px-7 py-5 border-b border-[var(--cd-line-soft)]">
+        <h3 class="text-base font-semibold text-[var(--cd-text-primary)]">移动到</h3>
         <button
           @click="emit('close')"
-          class="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer text-[#5f6368] hover:bg-[#e8f0fe] transition-colors"
+          class="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer text-[var(--cd-text-secondary)] hover:bg-[var(--cd-primary-soft)] transition-colors"
         >
           <span class="material-icons-round text-lg">close</span>
         </button>
-      </div>
+      </header>
 
       <!-- Tree -->
-      <div class="flex-1 overflow-auto p-4">
+      <div class="flex-1 overflow-auto px-5 py-4">
         <!-- Root option -->
         <button
           @click="selectFolder('')"
-          class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm cursor-pointer transition-colors"
-          :class="selectedPath === '' ? 'bg-[#d3e3fd] text-[#202124] font-medium' : 'text-[#202124] hover:bg-[#e8f0fe]'"
+          class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm cursor-pointer transition-colors"
+          :class="selectedPath === '' ? 'bg-[var(--cd-primary-soft)] text-[var(--cd-primary)] font-semibold' : 'text-[var(--cd-text-primary)] hover:bg-[var(--cd-primary-soft)]'"
         >
-          <span class="material-icons-round text-lg text-[#5f6368]">home</span>
+          <span class="material-icons-round text-lg text-[var(--cd-text-secondary)]">home</span>
           我的云盘（根目录）
         </button>
 
         <!-- Folder tree -->
-        <div class="ml-2">
+        <div class="ml-2 mt-1">
           <template v-for="node in tree" :key="node.path">
             <div class="folder-tree-node">
               <div class="flex items-center gap-1">
                 <button
                   @click="toggleExpand(node)"
-                  class="w-6 h-6 flex items-center justify-center cursor-pointer text-[#5f6368] rounded hover:bg-[#e8f0fe] transition-colors shrink-0"
+                  class="w-7 h-7 flex items-center justify-center cursor-pointer text-[var(--cd-text-secondary)] rounded-lg hover:bg-[var(--cd-primary-soft)] transition-colors shrink-0"
                 >
                   <span class="material-icons-round text-sm">
                     {{ node.expanded ? 'expand_more' : 'chevron_right' }}
@@ -138,20 +138,20 @@ onMounted(async () => {
                 </button>
                 <button
                   @click="selectFolder(node.path)"
-                  class="flex-1 flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm cursor-pointer transition-colors text-left"
-                  :class="selectedPath === node.path ? 'bg-[#d3e3fd] text-[#202124] font-medium' : 'text-[#202124] hover:bg-[#e8f0fe]'"
+                  class="flex-1 flex items-center gap-3 px-3 py-2 rounded-xl text-sm cursor-pointer transition-colors text-left"
+                  :class="selectedPath === node.path ? 'bg-[var(--cd-primary-soft)] text-[var(--cd-primary)] font-semibold' : 'text-[var(--cd-text-primary)] hover:bg-[var(--cd-primary-soft)]'"
                 >
-                  <span class="material-icons-round text-lg text-[#5f6368]">folder</span>
+                  <span class="material-icons-round text-lg text-[var(--cd-text-secondary)]">folder</span>
                   {{ node.name }}
                 </button>
               </div>
               <!-- Children -->
-              <div v-if="node.expanded && node.children.length" class="ml-6">
+              <div v-if="node.expanded && node.children.length" class="ml-7">
                 <div v-for="child in node.children" :key="child.path" class="folder-tree-node">
                   <div class="flex items-center gap-1">
                     <button
                       @click="toggleExpand(child)"
-                      class="w-6 h-6 flex items-center justify-center cursor-pointer text-[#5f6368] rounded hover:bg-[#e8f0fe] transition-colors shrink-0"
+                      class="w-7 h-7 flex items-center justify-center cursor-pointer text-[var(--cd-text-secondary)] rounded-lg hover:bg-[var(--cd-primary-soft)] transition-colors shrink-0"
                     >
                       <span class="material-icons-round text-sm">
                         {{ child.expanded ? 'expand_more' : 'chevron_right' }}
@@ -159,21 +159,21 @@ onMounted(async () => {
                     </button>
                     <button
                       @click="selectFolder(child.path)"
-                      class="flex-1 flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm cursor-pointer transition-colors text-left"
-                      :class="selectedPath === child.path ? 'bg-[#d3e3fd] text-[#202124] font-medium' : 'text-[#202124] hover:bg-[#e8f0fe]'"
+                      class="flex-1 flex items-center gap-3 px-3 py-2 rounded-xl text-sm cursor-pointer transition-colors text-left"
+                      :class="selectedPath === child.path ? 'bg-[var(--cd-primary-soft)] text-[var(--cd-primary)] font-semibold' : 'text-[var(--cd-text-primary)] hover:bg-[var(--cd-primary-soft)]'"
                     >
-                      <span class="material-icons-round text-lg text-[#5f6368]">folder</span>
+                      <span class="material-icons-round text-lg text-[var(--cd-text-secondary)]">folder</span>
                       {{ child.name }}
                     </button>
                   </div>
-                  <div v-if="child.expanded && child.children.length" class="ml-6">
+                  <div v-if="child.expanded && child.children.length" class="ml-7">
                     <div v-for="gc in child.children" :key="gc.path">
                       <button
                         @click="selectFolder(gc.path)"
-                        class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm cursor-pointer transition-colors text-left"
-                        :class="selectedPath === gc.path ? 'bg-[#d3e3fd] text-[#202124] font-medium' : 'text-[#202124] hover:bg-[#e8f0fe]'"
+                        class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm cursor-pointer transition-colors text-left"
+                        :class="selectedPath === gc.path ? 'bg-[var(--cd-primary-soft)] text-[var(--cd-primary)] font-semibold' : 'text-[var(--cd-text-primary)] hover:bg-[var(--cd-primary-soft)]'"
                       >
-                        <span class="material-icons-round text-lg text-[#5f6368]">folder</span>
+                        <span class="material-icons-round text-lg text-[var(--cd-text-secondary)]">folder</span>
                         {{ gc.name }}
                       </button>
                     </div>
@@ -186,24 +186,24 @@ onMounted(async () => {
       </div>
 
       <!-- Error -->
-      <p v-if="error" class="px-6 text-sm text-red-500">{{ error }}</p>
+      <p v-if="error" class="px-7 text-sm text-[#d93025]">{{ error }}</p>
 
       <!-- Footer -->
-      <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#dadce0]">
+      <footer class="flex items-center justify-end gap-3 px-7 py-4 border-t border-[var(--cd-line-soft)]">
         <button
           @click="emit('close')"
-          class="px-4 py-2 rounded-lg text-sm font-medium cursor-pointer text-[#1a73e8] hover:bg-[#e8f0fe] transition-colors"
+          class="cd-secondary-button px-5 py-2.5 text-sm"
         >
           取消
         </button>
         <button
           @click="handleMove"
           :disabled="moving"
-          class="px-6 py-2 rounded-lg text-sm font-medium text-white cursor-pointer transition-colors bg-[#1a73e8] hover:bg-[#1557b0] disabled:opacity-50"
+          class="cd-primary-button px-6 py-2.5 text-sm"
         >
-          {{ moving ? '移动中...' : '移动到此处' }}
+          {{ moving ? '移动中…' : '移动到此处' }}
         </button>
-      </div>
+      </footer>
     </div>
   </div>
 </template>

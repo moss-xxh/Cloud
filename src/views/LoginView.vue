@@ -48,12 +48,6 @@ function handleResetPassword() {
     </header>
 
     <main class="login-card" aria-labelledby="login-title">
-      <span class="brand-mark brand-mark--lg">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M7 18a5 5 0 1 1 .85-9.93A6 6 0 0 1 19 10a4 4 0 0 1 0 8H7Z" />
-        </svg>
-      </span>
-
       <h1 id="login-title" class="login-title">登录到 Cloud Drive</h1>
       <p class="login-subtitle">使用公司账号继续访问您的文件</p>
 
@@ -184,18 +178,6 @@ function handleResetPassword() {
 .brand-mark--sm svg {
   width: 18px;
   height: 18px;
-}
-
-.brand-mark--lg {
-  width: 56px;
-  height: 56px;
-  border-radius: 18px;
-  margin-bottom: 24px;
-}
-
-.brand-mark--lg svg {
-  width: 28px;
-  height: 28px;
 }
 
 .brand-name {

@@ -231,3 +231,157 @@ body {
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* ─── v3: Modal / Drawer / Floating menu / Toast utilities ─── */
+
+.cd-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(30, 41, 59, 0.32);
+  backdrop-filter: blur(8px) saturate(140%);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
+}
+
+.cd-modal-shell {
+  width: 100%;
+  max-width: 28rem;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--cd-border-glass);
+  border-radius: var(--cd-radius-dialog);
+  box-shadow: var(--cd-shadow-login);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 48px);
+  overflow: hidden;
+}
+
+.cd-drawer-shell {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 22rem;
+  max-width: 92vw;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-left: 1px solid var(--cd-border-glass);
+  box-shadow: var(--cd-shadow-panel);
+  display: flex;
+  flex-direction: column;
+}
+
+.cd-floating-menu {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--cd-border-glass);
+  border-radius: var(--cd-radius-control);
+  box-shadow: var(--cd-shadow-panel);
+  padding: 6px;
+  min-width: 13rem;
+}
+
+.cd-floating-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  color: var(--cd-text-primary);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: background-color var(--cd-transition), color var(--cd-transition);
+}
+
+.cd-floating-item:hover {
+  background: var(--cd-primary-soft);
+}
+
+.cd-floating-item.is-danger {
+  color: #d93025;
+}
+
+.cd-floating-item.is-danger:hover {
+  background: rgba(217, 48, 37, 0.08);
+}
+
+.cd-floating-divider {
+  height: 1px;
+  background: var(--cd-line-soft);
+  margin: 6px 4px;
+}
+
+.cd-toast {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--cd-border-glass);
+  border-radius: var(--cd-radius-card);
+  box-shadow: var(--cd-shadow-card);
+  padding: 14px 16px;
+}
+
+.cd-secondary-button {
+  border-radius: var(--cd-radius-control);
+  background: #ffffff;
+  color: var(--cd-primary);
+  border: 1px solid rgba(26, 115, 232, 0.4);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: background-color var(--cd-transition), border-color var(--cd-transition), color var(--cd-transition);
+}
+
+.cd-secondary-button:hover {
+  background: var(--cd-primary-soft);
+  border-color: var(--cd-primary);
+}
+
+.cd-secondary-button:disabled {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.cd-skel {
+  background: linear-gradient(90deg, rgba(60,80,140,0.06) 25%, rgba(60,80,140,0.12) 37%, rgba(60,80,140,0.06) 63%);
+  background-size: 400% 100%;
+  animation: cd-skel 1.4s ease infinite;
+  border-radius: 8px;
+}
+
+@keyframes cd-skel {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+
+.cd-state-empty,
+.cd-state-loading,
+.cd-state-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--cd-text-secondary);
+}
+
+.cd-state-error { color: #d93025; }
+
+/* ─── v3 state helpers (used by DriveView empty/error) ─── */
+.cd-state-center { flex: 1; display: grid; place-items: center; padding: 48px 24px; }
+.cd-state-card { text-align: center; max-width: 420px; }
+.cd-state-illustration { margin: 0 auto 24px; color: var(--cd-text-muted); }
+.cd-state-title { font-size: 18px; font-weight: 600; color: var(--cd-text-primary); margin: 0 0 8px; }
+.cd-state-desc { font-size: 14px; color: var(--cd-text-secondary); line-height: 1.6; margin: 0 0 24px; }
